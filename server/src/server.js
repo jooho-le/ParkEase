@@ -9,6 +9,7 @@ const __dirname = path.dirname(__filename);
 
 const PORT = process.env.PORT || 4000;
 const DATA_FILE = path.join(__dirname, '..', 'data', 'sensor-readings.json');
+const NFC_DATA_FILE = path.join(__dirname, '..', 'data', 'nfc-tags.json');
 
 async function ensureDataFile(filePath) {
   try {
@@ -86,7 +87,57 @@ class SensorRepository {
   }
 }
 
+class NfcRepository {
+  constructor(filePath) {
+    this.filePath = filePath;
+  }
+
+  async #readAll() {
+    await ensureDataFile(this.filePath);
+    const raw = await fs.readFile(this.filePath, 'utf8');
+    try {
+      return JSON.parse(raw);
+    } catch (error) {
+      throw new Error('NFC 데이터 파일이 손상되었습니다.');
+    }
+  }
+
+  async #writeAll(data) {
+    await fs.writeFile(this.filePath, JSON.stringify(data, null, 2), 'utf8');
+  }
+
+  async getAll() {
+    const data = await this.#readAll();
+    return [...data].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  }
+
+  async getLatest() {
+    const data = await this.#readAll();
+    if (data.length === 0) {
+      return null;
+    }
+    return data.reduce((prev, current) =>
+      new Date(current.createdAt) > new Date(prev.createdAt) ? current : prev
+    );
+  }
+
+  async create(entry) {
+    const data = await this.#readAll();
+    const record = {
+      id: randomUUID(),
+      cardId: entry.cardId,
+      speakerTriggered: entry.speakerTriggered ?? true,
+      createdAt: new Date().toISOString(),
+      metadata: entry.metadata ?? {},
+    };
+    data.push(record);
+    await this.#writeAll(data);
+    return record;
+  }
+}
+
 const repository = new SensorRepository(DATA_FILE);
+const nfcRepository = new NfcRepository(NFC_DATA_FILE);
 
 function setCors(res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -148,6 +199,32 @@ async function handleRequest(req, res) {
   try {
     if (req.method === 'GET' && pathname === '/health') {
       sendJson(res, 200, { status: 'ok' });
+      return;
+    }
+
+    if (pathname === '/api/nfc-tags') {
+      if (req.method === 'GET') {
+        const tags = await nfcRepository.getAll();
+        sendJson(res, 200, { data: tags });
+        return;
+      }
+
+      if (req.method === 'POST') {
+        const body = await parseJsonBody(req);
+        const validationError = validateNfcPayload(body);
+        if (validationError) {
+          sendError(res, 400, validationError);
+          return;
+        }
+        const record = await nfcRepository.create(body);
+        sendJson(res, 201, record);
+        return;
+      }
+    }
+
+    if (req.method === 'GET' && pathname === '/api/nfc-tags/latest') {
+      const latest = await nfcRepository.getLatest();
+      sendJson(res, 200, { data: latest });
       return;
     }
 
@@ -258,7 +335,31 @@ function validatePayload(body) {
   return null;
 }
 
+function validateNfcPayload(body) {
+  if (!body || typeof body !== 'object') {
+    return 'JSON 형식의 데이터가 필요합니다.';
+  }
+
+  if (!body.cardId || typeof body.cardId !== 'string') {
+    return 'cardId (문자열) 필드가 필요합니다.';
+  }
+
+  if (
+    body.speakerTriggered !== undefined &&
+    typeof body.speakerTriggered !== 'boolean'
+  ) {
+    return 'speakerTriggered 필드는 불리언이어야 합니다.';
+  }
+
+  if (body.metadata && typeof body.metadata !== 'object') {
+    return 'metadata 필드는 객체여야 합니다.';
+  }
+
+  return null;
+}
+
 await ensureDataFile(DATA_FILE);
+await ensureDataFile(NFC_DATA_FILE);
 
 const server = http.createServer(handleRequest);
 
