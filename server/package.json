@@ -1,0 +1,13 @@
+{
+  "name": "parkease-server",
+  "version": "0.1.0",
+  "description": "File-backed API for collecting Arduino sensor telemetry",
+  "type": "module",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
