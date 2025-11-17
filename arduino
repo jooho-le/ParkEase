@@ -1,175 +1,148 @@
-#include <SPI.h>       // MFRC522 (NFC) 라이브러리
+/*
+ * 스마트 주차 시스템 (부저 로직 수정)
+ * - 핀: 부저(8), 밝기LED(6), 버튼(4), 서보(5), 주차LED(7), 초음파(2,3), NFC(9-13)
+ * - 기능:
+ * 1. [버튼 모드 변경] 시 '삑' 또는 '삑삑' 소리가 납니다.
+ * 2. [NFC 카드 태그] 시에만 1초간 '삑-' 소리가 나고 명확히 꺼집니다.
+ * 3. [오류] 시에는 소리가 나지 않습니다.
+ */
 
-#include <MFRC522.h>   // MFRC522 (NFC) 라이브러리
+#include <SPI.h>
+#include <MFRC522.h>
+#include <Servo.h>
 
-
-
-// --- 핀 번호 설정 (우노 전용) ---
-
-
-
-// NFC 핀 (사진과 동일)
-
-#define RST_PIN   9    // MFRC522 리셋 핀
-
-#define SS_PIN    10   // MFRC522 SS (CS) 핀
-
-
-
-// 초음파 센서 핀
-
+// --- 핀 설정 ---
+#define RST_PIN   9
+#define SS_PIN    10
 int trig = 2;
-
 int echo = 3;
+int buttonPin = 4;   // 버튼
+int servoPin = 5;    // 서보모터
+int statusLedPin = 6; // 밝기 조절 LED
+int bLED = 7;         // 주차 감지 LED
+int buzzerPin = 8;   // ★ 부저 핀 ★
 
+// --- 객체 생성 ---
+MFRC522 mfrc522(SS_PIN, RST_PIN); 
+Servo gateServo;   
+int vehicleCount = 0; 
+bool isEntryMode = true; 
+int maxCars = 20; 
 
-
-// LED 핀 (파란색)
-
-int bLED = 7;
-
-
-
-// 부저 핀 (새로 추가)
-
-int buzzerPin = 8;
-
-
-
-// MFRC522 객체 생성
-
-MFRC522 mfrc522(SS_PIN, RST_PIN);  
-
-
+// 버튼 상태
+int lastButtonState = HIGH;
+unsigned long lastDebounceTime = 0;
+unsigned long debounceDelay = 50;
 
 void setup() {
-
-  // 시리얼 통신 설정 (우노는 9600)
-
   Serial.begin(9600);
-
-  
-
-  // SPI 및 MFRC522 초기화
-
-  SPI.begin();          
-
-  mfrc522.PCD_Init();   
-
-  
-
-  // 초음파 센서 핀 모드 설정
+  SPI.begin();
+  mfrc522.PCD_Init();
+  gateServo.attach(servoPin);
+  gateServo.write(0); 
 
   pinMode(trig, OUTPUT);
-
   pinMode(echo, INPUT);
-
-  
-
-  // 파란색 LED 핀 모드 설정
-
   pinMode(bLED, OUTPUT);
-
-  
-
-  // 부저 핀 모드 설정
-
-  pinMode(buzzerPin, OUTPUT);
-
-  
-
-  Serial.println("--- 스마트 주차 센서 (NFC + 초음파) ---");
-
-  Serial.println("시스템 준비 완료.");
-
+  pinMode(buzzerPin, OUTPUT);      // 부저
+  pinMode(buttonPin, INPUT_PULLUP);
+  pinMode(statusLedPin, OUTPUT); // 밝기 LED
 }
 
-
-
 void loop() {
-
   
+  // ==========================================
+  // 1. 버튼 눌림 감지 (모드 전환) - [★ 소리 다시 추가 ★]
+  // ==========================================
+  int reading = digitalRead(buttonPin); 
+  if (reading != lastButtonState) lastDebounceTime = millis();
+  
+  if ((millis() - lastDebounceTime) > debounceDelay) {
+    if (reading == LOW) { 
+      isEntryMode = !isEntryMode; 
+      if (isEntryMode) {
+        Serial.println(">>> 모드 변경: [입차 모드]");
+        tone(buzzerPin, 2000, 100); // ★ 입차 모드 '삑' 소리
+      } else {
+        Serial.println("<<< 모드 변경: [출차 모드]");
+        // ★ 출차 모드 '삑삑' 소리
+        tone(buzzerPin, 2000, 100); 
+        delay(150); // 소리 사이 간격
+        tone(buzzerPin, 2000, 100); 
+      }
+      while(digitalRead(buttonPin) == LOW); 
+    }
+  }
+  lastButtonState = reading;
 
-  // --- 1. NFC 태그 감지 로직 ---
-
-  // 새 태그가 감지되고, 읽기에 성공하면
-
-  if ( mfrc522.PICC_IsNewCardPresent() && mfrc522.PICC_ReadCardSerial() ) {
-
+  // ==========================================
+  // 2. NFC 태그 감지 (★ 1초 부저 울림 ★)
+  // ==========================================
+  if (mfrc522.PICC_IsNewCardPresent() && mfrc522.PICC_ReadCardSerial()) {
     
+    // ★★★ 요청하신 1초 부저 로직 (가장 먼저 실행) ★★★
+    Serial.println("NFC 태그됨! 1초간 부저 울림...");
+    tone(buzzerPin, 1500); // 1500Hz 소리로 부저 켜기 (시간 지정 X)
+    delay(1000);           // 1초 대기
+    noTone(buzzerPin);     // 부저 끄기
+    // ★★★ 여기까지 ★★★
 
-    Serial.print("NFC 태그 감지! ID: ");
+    bool validTag = false; 
 
-    // 태그 ID 출력
+    if (isEntryMode) {
+      if (vehicleCount < maxCars) {
+        vehicleCount++;
+        validTag = true;
+        Serial.print("★입차(IN)! ");
+      } else {
+        Serial.println("!! 주차장 만차 !!");
+      }
+    } else {
+      if (vehicleCount > 0) {
+        vehicleCount--;
+        validTag = true;
+        Serial.print("☆출차(OUT)! ");
+      } else {
+        Serial.println("!! 출차할 차량 없음 !!");
+      }
+    }
+    
+    Serial.print("현재 차량 수: ");
+    Serial.println(vehicleCount);
 
-    for (byte i = 0; i < mfrc522.uid.size; i++) {
+    // [밝기 조절] - 6번 핀
+    int brightness = map(vehicleCount, 0, maxCars, 0, 255);
+    analogWrite(statusLedPin, brightness); 
+    Serial.print("LED 밝기(6번핀): ");
+    Serial.println(brightness);
 
-       Serial.print(mfrc522.uid.uidByte[i], HEX);
-
+    // [게이트 작동]
+    if (validTag) {
+      gateServo.write(90); 
+      // 1초 부저가 울린 후 게이트가 열리고, 3초간 대기
+      delay(3000);         
+      gateServo.write(0);  
     }
 
-    Serial.println();
-
-    
-
-    // 부저 울리기 (0.2초)
-
-    tone(buzzerPin, 1000, 200);
-
-    
-
-    // 태그가 계속 찍히는 것을 방지
-
     mfrc522.PICC_HaltA(); 
-
+    mfrc522.PCD_StopCrypto1();
   }
 
-
-
-  // --- 2. 초음파 센서 거리 측정 로직 ---
-
-  float duration, distance;
-
-  
-
+  // ==========================================
+  // 3. 초음파 센서 & (파란) LED [소리 없음]
+  // ==========================================
   digitalWrite(trig, HIGH);
-
   delayMicroseconds(10);
-
   digitalWrite(trig, LOW);
 
-
-
-  duration = pulseIn(echo, HIGH);
-
-  distance = (duration * 340) / 10000.0 / 2.0; 
-
-
-
-  Serial.print("거리 : ");
-
-  Serial.print(distance);
-
-  Serial.println("cm");
-
-
-
-  // --- 3. 파란색 LED 제어 로직 (10cm 기준) ---
+  float duration = pulseIn(echo, HIGH);
+  float distance = (duration * 340) / 10000.0 / 2.0;
 
   if (distance < 10 && distance > 0) {
-
-    digitalWrite(bLED, HIGH); // 10cm 미만이면 켜기
-
+    digitalWrite(bLED, HIGH); // 파란 LED (7번핀)
   } else {
-
-    digitalWrite(bLED, LOW);  // 10cm 이상이면 끄기
-
+    digitalWrite(bLED, LOW);
   }
-
   
-
-  // 0.1초마다 반복
-
-  delay(100); 
-
+  delay(100);
 }
