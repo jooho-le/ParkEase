@@ -5,8 +5,38 @@ import 'package:webui/screens/parking_status_page.dart';
 import 'package:webui/utils/constants.dart';
 import 'package:webui/widgets/navigation_bar.dart';
 
+import 'screens/login_screen.dart';
+import 'screens/register_screen.dart';
+
+
 void main() {
-  runApp(const SmartParkingApp());
+  runApp(const MyApp());
+}
+
+class MyApp extends StatelessWidget {
+  const MyApp({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'ParkEase',
+      theme: ThemeData(
+        primarySwatch: Colors.blue,
+        useMaterial3: true,
+      ),
+
+      
+      debugShowCheckedModeBanner: false,
+      
+      initialRoute: '/login',
+
+      routes: {
+        '/login': (context) => const LoginScreen(),
+        '/register': (context) => const RegisterScreen(),
+        '/home': (context) => const SmartParkingApp(), // ✅ 수정: HomePage → SmartParkingApp
+      },
+    );
+  }
 }
 
 class SmartParkingApp extends StatelessWidget {
@@ -14,12 +44,10 @@ class SmartParkingApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'JBNU Smart Parking',
-      debugShowCheckedModeBanner: false, // 디버그 띠 제거
-      
-      // [테마 설정 시작]
-      theme: ThemeData(
+    // ✅ MaterialApp을 Scaffold로 변경
+    // 이유: 이미 MyApp에서 MaterialApp을 사용 중이므로 중복 방지
+    return Theme(
+      data: ThemeData(
         primaryColor: kPrimaryColor,
         scaffoldBackgroundColor: kBackgroundColor,
         useMaterial3: true,
@@ -31,21 +59,18 @@ class SmartParkingApp extends StatelessWidget {
           secondary: kAccentColor,
         ),
 
-        // 1. 폰트 설정 (ThemeData의 직접적인 속성입니다)
+        // 1. 폰트 설정
         fontFamily: 'NotoSansKR', 
         
-        // 2. 카드 테마 설정 (ThemeData의 속성입니다)
+        // 2. 카드 테마 설정
         cardTheme: CardThemeData(
           elevation: 0,
-          // 모서리 둥글게 (const를 쓰면 안 됩니다. BorderRadius.circular는 런타임 계산이 필요합니다)
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12.0),
           ),
         ),
-      ), 
-      // [테마 설정 끝]
-
-      home: const MainShell(),
+      ),
+      child: const MainShell(),
     );
   }
 }
