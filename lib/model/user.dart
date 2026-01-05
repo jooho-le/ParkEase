@@ -1,29 +1,59 @@
 /*
  * ==========================================
- * [데이터 모델: 사용자]
- * 로그인한 사용자의 정보를 담습니다.
- * 기획서에 명시된 '이용자 유형(학생/교직원)' 필드를 포함합니다.
+ * [모델: 사용자]
+ * 사용자 정보를 담는 데이터 모델
  * ==========================================
  */
 class User {
-  final String id;        // 학번 또는 사번
-  final String name;      // 사용자 이름
-  final String userType;  // 유형 (student, staff, visitor)
-  final String carNumber; // 등록된 차량 번호
+  final String id;
+  final String name;
+  final String userType; // 'student' 또는 'staff'
+  final String? carNumber;
 
   User({
     required this.id,
     required this.name,
     required this.userType,
-    required this.carNumber,
+    this.carNumber,
   });
 
+  // JSON에서 User 객체 생성
   factory User.fromJson(Map<String, dynamic> json) {
     return User(
-      id: json['id'] ?? '',
-      name: json['name'] ?? 'Guest',
-      userType: json['user_type'] ?? 'student',
-      carNumber: json['car_number'] ?? '',
+      id: json['id'] as String,
+      name: json['name'] as String,
+      userType: json['userType'] as String,
+      carNumber: json['carNumber'] as String?,
     );
+  }
+
+  // User 객체를 JSON으로 변환
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'name': name,
+      'userType': userType,
+      'carNumber': carNumber,
+    };
+  }
+
+  // User 객체 복사 (일부 필드만 변경)
+  User copyWith({
+    String? id,
+    String? name,
+    String? userType,
+    String? carNumber,
+  }) {
+    return User(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      userType: userType ?? this.userType,
+      carNumber: carNumber ?? this.carNumber,
+    );
+  }
+
+  @override
+  String toString() {
+    return 'User(id: $id, name: $name, userType: $userType, carNumber: $carNumber)';
   }
 }
