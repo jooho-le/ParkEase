@@ -2,7 +2,8 @@ import http from 'http';
 import fs from 'fs/promises';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { randomUUID } from 'crypto';
+import { randomUUID, randomBytes, createHash } from 'crypto';
+import sqlite3 from 'sqlite3';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -10,6 +11,7 @@ const __dirname = path.dirname(__filename);
 const PORT = process.env.PORT || 4000;
 const DATA_FILE = path.join(__dirname, '..', 'data', 'sensor-readings.json');
 const NFC_DATA_FILE = path.join(__dirname, '..', 'data', 'nfc-tags.json');
+const DB_FILE = path.join(__dirname, '..', 'data', 'parkease.db');
 
 async function ensureDataFile(filePath) {
   try {
@@ -18,6 +20,71 @@ async function ensureDataFile(filePath) {
     await fs.mkdir(path.dirname(filePath), { recursive: true });
     await fs.writeFile(filePath, '[]', 'utf8');
   }
+}
+
+function openDatabase(filePath) {
+  const db = new sqlite3.Database(filePath);
+  return {
+    run(sql, params = []) {
+      return new Promise((resolve, reject) => {
+        db.run(sql, params, function (error) {
+          if (error) {
+            reject(error);
+            return;
+          }
+          resolve(this);
+        });
+      });
+    },
+    get(sql, params = []) {
+      return new Promise((resolve, reject) => {
+        db.get(sql, params, (error, row) => {
+          if (error) {
+            reject(error);
+            return;
+          }
+          resolve(row);
+        });
+      });
+    },
+    all(sql, params = []) {
+      return new Promise((resolve, reject) => {
+        db.all(sql, params, (error, rows) => {
+          if (error) {
+            reject(error);
+            return;
+          }
+          resolve(rows);
+        });
+      });
+    },
+  };
+}
+
+const database = openDatabase(DB_FILE);
+
+async function initializeDatabase() {
+  await database.run(`
+    CREATE TABLE IF NOT EXISTS users (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      user_type TEXT NOT NULL,
+      car_number TEXT,
+      password_hash TEXT NOT NULL,
+      password_salt TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    )
+  `);
+
+  await database.run(`
+    CREATE TABLE IF NOT EXISTS tokens (
+      token TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      FOREIGN KEY(user_id) REFERENCES users(id)
+    )
+  `);
 }
 
 class SensorRepository {
@@ -136,13 +203,10 @@ class NfcRepository {
   }
 }
 
-const repository = new SensorRepository(DATA_FILE);
-const nfcRepository = new NfcRepository(NFC_DATA_FILE);
-
 function setCors(res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,DELETE,OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 }
 
 function sendJson(res, status, payload) {
@@ -184,6 +248,132 @@ async function parseJsonBody(req) {
   });
 }
 
+function sanitizeUser(user) {
+  return {
+    id: user.id,
+    name: user.name,
+    userType: user.userType,
+    carNumber: user.carNumber ?? null,
+  };
+}
+
+function hashPassword(password, salt) {
+  return createHash('sha256').update(`${salt}:${password}`).digest('hex');
+}
+
+function getBearerToken(req) {
+  const authHeader = req.headers.authorization || '';
+  const [scheme, token] = authHeader.split(' ');
+  if (scheme !== 'Bearer' || !token) {
+    return null;
+  }
+  return token;
+}
+
+class UserRepository {
+  constructor(db) {
+    this.db = db;
+  }
+
+  async getById(id) {
+    const row = await this.db.get(
+      `
+      SELECT
+        id,
+        name,
+        user_type as userType,
+        car_number as carNumber,
+        password_hash as passwordHash,
+        password_salt as passwordSalt,
+        created_at as createdAt,
+        updated_at as updatedAt
+      FROM users
+      WHERE id = ?
+    `,
+      [id]
+    );
+    return row ?? null;
+  }
+
+  async create({ id, password, name, userType, carNumber }) {
+    const existing = await this.getById(id);
+    if (existing) {
+      return null;
+    }
+
+    const salt = randomBytes(16).toString('hex');
+    const passwordHash = hashPassword(password, salt);
+    const now = new Date().toISOString();
+    await this.db.run(
+      `
+      INSERT INTO users (
+        id,
+        name,
+        user_type,
+        car_number,
+        password_hash,
+        password_salt,
+        created_at,
+        updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `,
+      [
+        id,
+        name,
+        userType,
+        carNumber ?? null,
+        passwordHash,
+        salt,
+        now,
+        now,
+      ]
+    );
+    return await this.getById(id);
+  }
+}
+
+class TokenRepository {
+  constructor(db) {
+    this.db = db;
+  }
+
+  async getByToken(token) {
+    const row = await this.db.get(
+      `
+      SELECT
+        token,
+        user_id as userId,
+        created_at as createdAt
+      FROM tokens
+      WHERE token = ?
+    `,
+      [token]
+    );
+    return row ?? null;
+  }
+
+  async create(userId) {
+    const record = {
+      token: randomUUID(),
+      userId,
+      createdAt: new Date().toISOString(),
+    };
+    await this.db.run(
+      `
+      INSERT INTO tokens (token, user_id, created_at)
+      VALUES (?, ?, ?)
+    `,
+      [record.token, record.userId, record.createdAt]
+    );
+    return record;
+  }
+}
+
+const repository = new SensorRepository(DATA_FILE);
+const nfcRepository = new NfcRepository(NFC_DATA_FILE);
+const userRepository = new UserRepository(database);
+const tokenRepository = new TokenRepository(database);
+
 async function handleRequest(req, res) {
   setCors(res);
 
@@ -199,6 +389,73 @@ async function handleRequest(req, res) {
   try {
     if (req.method === 'GET' && pathname === '/health') {
       sendJson(res, 200, { status: 'ok' });
+      return;
+    }
+
+    if (req.method === 'POST' && pathname === '/auth/register') {
+      const body = await parseJsonBody(req);
+      const validationError = validateRegisterPayload(body);
+      if (validationError) {
+        sendError(res, 400, validationError);
+        return;
+      }
+
+      const user = await userRepository.create(body);
+      if (!user) {
+        sendError(res, 409, '이미 존재하는 아이디입니다.');
+        return;
+      }
+
+      const tokenRecord = await tokenRepository.create(user.id);
+      sendJson(res, 201, { token: tokenRecord.token, user: sanitizeUser(user) });
+      return;
+    }
+
+    if (req.method === 'POST' && pathname === '/auth/login') {
+      const body = await parseJsonBody(req);
+      const validationError = validateLoginPayload(body);
+      if (validationError) {
+        sendError(res, 400, validationError);
+        return;
+      }
+
+      const user = await userRepository.getById(body.id);
+      if (!user) {
+        sendError(res, 401, '아이디 또는 비밀번호가 올바르지 않습니다.');
+        return;
+      }
+
+      const passwordHash = hashPassword(body.password, user.passwordSalt);
+      if (passwordHash !== user.passwordHash) {
+        sendError(res, 401, '아이디 또는 비밀번호가 올바르지 않습니다.');
+        return;
+      }
+
+      const tokenRecord = await tokenRepository.create(user.id);
+      sendJson(res, 200, { token: tokenRecord.token, user: sanitizeUser(user) });
+      return;
+    }
+
+    if (req.method === 'GET' && pathname === '/auth/verify') {
+      const token = getBearerToken(req);
+      if (!token) {
+        sendError(res, 401, '인증 토큰이 필요합니다.');
+        return;
+      }
+
+      const tokenRecord = await tokenRepository.getByToken(token);
+      if (!tokenRecord) {
+        sendError(res, 401, '유효하지 않은 토큰입니다.');
+        return;
+      }
+
+      const user = await userRepository.getById(tokenRecord.userId);
+      if (!user) {
+        sendError(res, 401, '유효하지 않은 사용자입니다.');
+        return;
+      }
+
+      sendJson(res, 200, { valid: true, user: sanitizeUser(user) });
       return;
     }
 
@@ -335,6 +592,50 @@ function validatePayload(body) {
   return null;
 }
 
+function validateRegisterPayload(body) {
+  if (!body || typeof body !== 'object') {
+    return 'JSON 형식의 데이터가 필요합니다.';
+  }
+
+  if (!body.id || typeof body.id !== 'string') {
+    return 'id (문자열) 필드가 필요합니다.';
+  }
+
+  if (!body.password || typeof body.password !== 'string') {
+    return 'password (문자열) 필드가 필요합니다.';
+  }
+
+  if (!body.name || typeof body.name !== 'string') {
+    return 'name (문자열) 필드가 필요합니다.';
+  }
+
+  if (!body.userType || typeof body.userType !== 'string') {
+    return 'userType (문자열) 필드가 필요합니다.';
+  }
+
+  if (body.carNumber && typeof body.carNumber !== 'string') {
+    return 'carNumber (문자열) 필드가 필요합니다.';
+  }
+
+  return null;
+}
+
+function validateLoginPayload(body) {
+  if (!body || typeof body !== 'object') {
+    return 'JSON 형식의 데이터가 필요합니다.';
+  }
+
+  if (!body.id || typeof body.id !== 'string') {
+    return 'id (문자열) 필드가 필요합니다.';
+  }
+
+  if (!body.password || typeof body.password !== 'string') {
+    return 'password (문자열) 필드가 필요합니다.';
+  }
+
+  return null;
+}
+
 function validateNfcPayload(body) {
   if (!body || typeof body !== 'object') {
     return 'JSON 형식의 데이터가 필요합니다.';
@@ -360,6 +661,7 @@ function validateNfcPayload(body) {
 
 await ensureDataFile(DATA_FILE);
 await ensureDataFile(NFC_DATA_FILE);
+await initializeDatabase();
 
 const server = http.createServer(handleRequest);
 

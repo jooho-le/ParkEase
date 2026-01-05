@@ -1,6 +1,6 @@
 # ParkEase Server
 
-초음파 센서와 LED 상태(켜짐/꺼짐)를 기록하고 조회하는 REST API입니다. Wi-Fi 없이도 PC ↔ 아두이노를 USB로 연결해 센서 값을 읽은 뒤 이 서버에 HTTP 요청만 보내면 됩니다. 외부 DB 대신 JSON 파일(`data/sensor-readings.json`)을 영속 저장소로 사용합니다.
+초음파 센서와 LED 상태(켜짐/꺼짐)를 기록하고 조회하는 REST API입니다. Wi-Fi 없이도 PC ↔ 아두이노를 USB로 연결해 센서 값을 읽은 뒤 이 서버에 HTTP 요청만 보내면 됩니다. 센서/NFC 데이터는 JSON 파일(`data/sensor-readings.json`)로 저장하고, 로그인/회원가입 데이터는 SQLite(`data/parkease.db`)에 저장합니다.
 
 ## 폴더 구조
 ```
@@ -8,16 +8,21 @@ server/
 ├── data/
 │   ├── sensor-readings.json   # 초음파/LED 기록
 │   └── nfc-tags.json          # NFC 태그 히스토리
-├── package.json               # Node 18+ 환경, 의존성 없이 실행 가능
+│   └── parkease.db            # 로그인/회원가입 SQLite DB
+├── package.json               # Node 18+ 환경, sqlite3 의존성 사용
 └── src/
     └── server.js              # HTTP 서버와 라우팅, 저장소 로직
 ```
 
 ## 실행 방법
 1. Node 18 이상이 설치되어 있는지 확인합니다.
-2. 서버를 실행합니다.
+2. 의존성을 설치합니다.
    ```bash
    cd server
+   npm install
+   ```
+3. 서버를 실행합니다.
+   ```bash
    npm start
    ```
    기본 포트는 `4000`이며 `PORT` 환경 변수를 통해 변경할 수 있습니다.
@@ -26,6 +31,9 @@ server/
 | Method | Endpoint                 | 설명 |
 |--------|--------------------------|------|
 | GET    | `/health`                | 서버 상태 확인 |
+| POST   | `/auth/register`         | 회원가입 |
+| POST   | `/auth/login`            | 로그인 |
+| GET    | `/auth/verify`           | 토큰 검증 |
 | GET    | `/api/readings`          | 모든 거리/LED 기록 조회 |
 | GET    | `/api/readings/latest`   | 가장 최근 거리/LED 기록 |
 | POST   | `/api/readings`          | 새로운 거리/LED 기록 저장 |

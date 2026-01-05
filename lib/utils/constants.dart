@@ -56,4 +56,4 @@ const TextStyle kSubBodyStyle = TextStyle(
 
 // --- API Constants ---
 // 실제 백엔드 서버 주소 (기획서의 API Gateway)
-const String kApiBaseUrl = "https://api.smart-parking.jbnu.ac.kr";
+const String kApiBaseUrl = "http://localhost:4000";

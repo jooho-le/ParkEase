@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:webui/model/user.dart';
+import 'package:webui/utils/constants.dart';
 
 /*
  * ==========================================
@@ -17,7 +18,7 @@ class AuthService {
   AuthService._internal();
 
   // API 기본 URL (실제 서버 주소로 변경 필요)
-  static const String baseUrl = 'https://your-api-server.com/api';
+  static const String baseUrl = kApiBaseUrl;
   
   // 보안 저장소
   final _storage = const FlutterSecureStorage();
@@ -33,24 +34,33 @@ class AuthService {
   User? get currentUser => _currentUser;
   
   // ==========================================
-  // 로그인 (현재는 Mock)
+  // 로그인
   // ==========================================
   Future<bool> login(String id, String password) async {
-    // Mock 로그인 처리
-    await Future.delayed(const Duration(seconds: 1));
-    
-    // 간단한 검증 (비어있지 않으면 성공)
-    if (id.isNotEmpty && password.isNotEmpty) {
-      _currentUser = User(
-        id: id,
-        name: '사용자',
-        userType: 'student',
-        //carNumber: null,
-        carNumber: '',
-      );
-      return true;
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/auth/login'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'id': id,
+          'password': password,
+        }),
+      ).timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['token'] != null && data['user'] != null) {
+          await _storage.write(key: _tokenKey, value: data['token']);
+          _currentUser = User.fromJson(data['user']);
+          await _storage.write(key: _userKey, value: jsonEncode(data['user']));
+          return true;
+        }
+      }
+      return false;
+    } catch (e) {
+      print('Login error: $e');
+      return false;
     }
-    return false;
   }
 
   // ==========================================
