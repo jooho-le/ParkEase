@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:webui/model/user.dart';
+import 'package:webui/screens/notification_settings_page.dart';
+import 'package:webui/screens/reservation_history_page.dart';
 import 'package:webui/services/auth_service.dart';
+import 'package:webui/services/profile_service.dart';
 import 'package:webui/utils/constants.dart';
 
 class MyPage extends StatefulWidget {
@@ -11,13 +15,36 @@ class MyPage extends StatefulWidget {
 
 class _MyPageState extends State<MyPage> {
   final AuthService _authService = AuthService();
+  final ProfileService _profileService = ProfileService();
+  User? _user;
+  bool _isLoadingProfile = false;
 
   @override
   void initState() {
     super.initState();
-    // 화면 진입 시 자동 로그인 시도 (데모용)
-    if (_authService.currentUser == null) {
-      _authService.login("20251234", "password").then((_) => setState(() {}));
+    _user = _authService.currentUser;
+    _loadProfile();
+  }
+
+  Future<void> _loadProfile() async {
+    setState(() => _isLoadingProfile = true);
+    try {
+      final user = await _profileService.getProfile();
+      if (!mounted) {
+        return;
+      }
+      setState(() => _user = user);
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('프로필 정보를 불러오지 못했습니다.')),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isLoadingProfile = false);
+      }
     }
   }
 
@@ -59,7 +86,7 @@ class _MyPageState extends State<MyPage> {
 
   @override
   Widget build(BuildContext context) {
-    final user = _authService.currentUser;
+    final user = _user ?? _authService.currentUser;
 
     return Scaffold(
       backgroundColor: kBackgroundColor,
@@ -83,11 +110,17 @@ class _MyPageState extends State<MyPage> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(user.name, style: kHeadlineStyle.copyWith(fontSize: 20)),
-                        Text("${user.id} | ${user.carNumber ?? '차량 미등록'}", style: kSubBodyStyle),
+                        Text(
+                          "${user.id} | ${user.carNumber == null || user.carNumber!.isEmpty ? '차량 미등록' : user.carNumber}",
+                          style: kSubBodyStyle,
+                        ),
                       ],
                     )
                   else
-                    Text("로그인 중...", style: kBodyStyle),
+                    Text(
+                      _isLoadingProfile ? "불러오는 중..." : "로그인이 필요합니다.",
+                      style: kBodyStyle,
+                    ),
                 ],
               ),
             ),
@@ -102,8 +135,10 @@ class _MyPageState extends State<MyPage> {
                     Icons.history,
                     "주차 이력 조회",
                     onTap: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('주차 이력 조회 기능 준비 중입니다.')),
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => const ReservationHistoryPage(),
+                        ),
                       );
                     },
                   ),
@@ -111,17 +146,17 @@ class _MyPageState extends State<MyPage> {
                     Icons.directions_car,
                     "차량 등록/관리",
                     onTap: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('차량 등록/관리 기능 준비 중입니다.')),
-                      );
+                      _showCarNumberDialog(context, user?.carNumber);
                     },
                   ),
                   _buildMenuTile(
                     Icons.notifications_outlined,
                     "알림 설정",
                     onTap: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('알림 설정 기능 준비 중입니다.')),
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => const NotificationSettingsPage(),
+                        ),
                       );
                     },
                   ),
@@ -147,6 +182,72 @@ class _MyPageState extends State<MyPage> {
           ],
         ),
       ),
+    );
+  }
+
+  void _showCarNumberDialog(BuildContext context, String? currentCarNumber) {
+    final controller = TextEditingController(text: currentCarNumber ?? '');
+    bool isSaving = false;
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: const Text('차량 번호 등록'),
+              content: TextField(
+                controller: controller,
+                decoration: const InputDecoration(
+                  hintText: '차량 번호를 입력하세요',
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: isSaving ? null : () => Navigator.pop(dialogContext),
+                  child: const Text('취소'),
+                ),
+                TextButton(
+                  onPressed: isSaving
+                      ? null
+                      : () async {
+                          setDialogState(() => isSaving = true);
+                          try {
+                            final value = controller.text.trim();
+                            final updatedUser = await _profileService.updateCarNumber(
+                              value.isEmpty ? null : value,
+                            );
+                            if (!mounted) {
+                              return;
+                            }
+                            setState(() => _user = updatedUser);
+                            Navigator.pop(dialogContext);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('차량 정보가 저장되었습니다.')),
+                            );
+                          } catch (_) {
+                            if (!mounted) {
+                              return;
+                            }
+                            setDialogState(() => isSaving = false);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('차량 정보를 저장하지 못했습니다.')),
+                            );
+                          }
+                        },
+                  child: isSaving
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Text('저장'),
+                ),
+              ],
+            );
+          },
+        );
+      },
     );
   }
 

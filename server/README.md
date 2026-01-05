@@ -34,6 +34,14 @@ server/
 | POST   | `/auth/register`         | 회원가입 |
 | POST   | `/auth/login`            | 로그인 |
 | GET    | `/auth/verify`           | 토큰 검증 |
+| GET    | `/api/profile`           | 내 프로필 조회 |
+| PUT    | `/api/profile`           | 차량 번호 업데이트 |
+| GET    | `/api/notification-settings` | 알림 설정 조회 |
+| PUT    | `/api/notification-settings` | 알림 설정 업데이트 |
+| GET    | `/api/reservations`      | 내 예약 목록 조회 |
+| POST   | `/api/reservations`      | 예약 생성 |
+| GET    | `/api/reservations/:id`  | 예약 단건 조회 |
+| DELETE | `/api/reservations/:id`  | 예약 취소 |
 | GET    | `/api/readings`          | 모든 거리/LED 기록 조회 |
 | GET    | `/api/readings/latest`   | 가장 최근 거리/LED 기록 |
 | POST   | `/api/readings`          | 새로운 거리/LED 기록 저장 |

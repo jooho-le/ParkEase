@@ -32,6 +32,11 @@ class AuthService {
   static const String _userKey = 'user_data';
 
   User? get currentUser => _currentUser;
+
+  Future<void> saveUser(User user) async {
+    _currentUser = user;
+    await _storage.write(key: _userKey, value: jsonEncode(user.toJson()));
+  }
   
   // ==========================================
   // 로그인
@@ -268,31 +273,4 @@ class AuthService {
     }
   }
 
-  // ==========================================
-  // Mock 로그인 (개발용)
-  // ==========================================
-  Future<bool> _mockLogin(String id, String password) async {
-    await Future.delayed(const Duration(seconds: 1));
-    
-    _currentUser = User(
-      id: id,
-      name: '테스트 사용자',
-      userType: 'student',
-      carNumber: '123가 4567',
-    );
-    
-    // Mock 토큰 저장
-    await _storage.write(key: _tokenKey, value: 'mock_jwt_token_12345');
-    await _storage.write(
-      key: _userKey,
-      value: jsonEncode({
-        'id': id,
-        'name': '테스트 사용자',
-        'userType': 'student',
-        'carNumber': '123가 4567',
-      }),
-    );
-    
-    return true;
-  }
 }

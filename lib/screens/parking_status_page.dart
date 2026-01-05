@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:webui/model/parking_lot.dart';
 import 'package:webui/services/parking_api.dart';
+import 'package:webui/services/reservation_api.dart';
 import 'package:webui/utils/constants.dart';
 import 'package:webui/widgets/parking_lot_card.dart';
 
@@ -13,6 +14,7 @@ class ParkingStatusPage extends StatefulWidget {
 
 class _ParkingStatusPageState extends State<ParkingStatusPage> {
   final ParkingApiService _apiService = ParkingApiService();
+  final ReservationApiService _reservationService = ReservationApiService();
   late Future<List<ParkingLot>> _lotsFuture;
 
   @override
@@ -29,19 +31,39 @@ class _ParkingStatusPageState extends State<ParkingStatusPage> {
 
   void _handleReservation(String lotName) {
     // 예약 로직 (기획서 기능)
+    final parentContext = context;
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: Text("주차 예약 확인"),
-        content: Text("$lotName 주차장을 예약하시겠습니까?\n(10분 내 미입차 시 자동 취소)"),
+        content: Text("$lotName 주차장을 예약하시겠습니까?\n(일정 시간 내 미입차 시 자동 취소)"),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context), child: Text("취소")),
           ElevatedButton(
-            onPressed: () {
+            onPressed: () async {
               Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text("예약이 완료되었습니다."), backgroundColor: kPrimaryColor),
-              );
+              try {
+                await _reservationService.createReservation(lotName);
+                if (!mounted) {
+                  return;
+                }
+                ScaffoldMessenger.of(parentContext).showSnackBar(
+                  SnackBar(
+                    content: Text("예약이 완료되었습니다."),
+                    backgroundColor: kPrimaryColor,
+                  ),
+                );
+              } catch (error) {
+                if (!mounted) {
+                  return;
+                }
+                ScaffoldMessenger.of(parentContext).showSnackBar(
+                  SnackBar(
+                    content: Text("예약에 실패했습니다."),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              }
             },
             style: ElevatedButton.styleFrom(backgroundColor: kPrimaryColor),
             child: Text("확인"),

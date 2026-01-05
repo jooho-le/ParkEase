@@ -191,19 +191,21 @@ class _HomePageState extends State<HomePage> {
                   );
                 }
 
-                final data = snapshot.data!;
+                final data = snapshot.data ?? {};
+                final co2Saved = data['co2_saved'];
+                final timeSaved = data['time_saved'];
                 return Row(
                   children: [
                     StatsCard(
                       title: "CO2 절감량",
-                      value: "${data['co2_saved']}kg",
+                      value: co2Saved == null ? "준비중" : "${co2Saved}kg",
                       icon: Icons.eco,
                       accentColor: kAccentColor,
                     ),
                     const SizedBox(width: 12),
                     StatsCard(
                       title: "시간 절약",
-                      value: "${data['time_saved']}분",
+                      value: timeSaved == null ? "준비중" : "${timeSaved}분",
                       icon: Icons.timer,
                       accentColor: Colors.blue,
                     ),
@@ -230,7 +232,7 @@ class _HomePageState extends State<HomePage> {
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
-                      "오늘의 예상 피크 타임은 14:00 ~ 16:00 입니다.\n이 시간대를 피하면 쾌적한 주차가 가능합니다.",
+                      "피크 타임 정보를 준비 중입니다.\n실시간 데이터 연동 후 제공됩니다.",
                       style: kBodyStyle.copyWith(fontSize: 14),
                     ),
                   ),

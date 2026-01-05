@@ -296,7 +296,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   controller: _carNumberController,
                   decoration: InputDecoration(
                     labelText: '차량 번호',
-                    hintText: '예: 123가 4567',
+                    hintText: '차량 번호를 입력하세요',
                     prefixIcon: const Icon(Icons.directions_car_outlined),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
