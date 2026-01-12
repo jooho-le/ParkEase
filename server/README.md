@@ -104,4 +104,18 @@ curl -X POST http://localhost:4000/api/nfc-tags \
 - **웹/모바일 앱:** `/api/readings` 목록을 사용해 히스토리를 보여주고 `/api/led-state`로 현재 LED 상태를, `/api/nfc-tags`/`/api/nfc-tags/latest`로 출입 기록을 확인합니다.
 - **데이터 정제:** `metadata` 필드에 배터리 전압, 센서 상태 등을 함께 전달해 후처리 시 활용할 수 있습니다.
 
+### USB 시리얼 브릿지 예시 (Python)
+1. 아두이노는 센서값을 JSON 한 줄로 `Serial.println` 하도록 구성합니다.
+2. 아래 브릿지 스크립트가 시리얼을 읽어 `/api/readings`, `/api/nfc-tags`로 전송합니다.
+
+```bash
+pip install pyserial
+python scripts/serial_bridge.py --port /dev/tty.usbmodem1101 --baud 9600 --server http://localhost:4000
+```
+
+포트 목록 확인 (macOS 예시):
+```bash
+ls /dev/tty.*
+```
+
 추후 실제 RDBMS(MySQL, PostgreSQL 등)로 교체할 때는 `SensorRepository` 클래스만 해당 DB 로직으로 바꾸면 나머지 API 코드는 그대로 재사용할 수 있습니다.

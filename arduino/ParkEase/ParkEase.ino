@@ -21,6 +21,10 @@ int servoPin = 5;    // 서보모터
 int statusLedPin = 6; // 밝기 조절 LED
 int bLED = 7;         // 주차 감지 LED
 int buzzerPin = 8;   // ★ 부저 핀 ★
+const char* SENSOR_ID = "gate-01";
+const float THRESHOLD_CM = 10.0;
+unsigned long lastReadingSendMs = 0;
+const unsigned long readingIntervalMs = 1000;
 
 // --- 객체 생성 ---
 MFRC522 mfrc522(SS_PIN, RST_PIN); 
@@ -33,6 +37,37 @@ int maxCars = 20;
 int lastButtonState = HIGH;
 unsigned long lastDebounceTime = 0;
 unsigned long debounceDelay = 50;
+
+void sendReadingJson(float distanceCm, float thresholdCm, bool ledState, unsigned long durationUs) {
+  bool validDistance = distanceCm > 0;
+  Serial.print("{\"type\":\"reading\",\"sensorId\":\"");
+  Serial.print(SENSOR_ID);
+  Serial.print("\",\"distanceCm\":");
+  Serial.print(distanceCm, 1);
+  Serial.print(",\"thresholdCm\":");
+  Serial.print(thresholdCm, 1);
+  Serial.print(",\"ledState\":");
+  Serial.print(ledState ? "true" : "false");
+  Serial.print(",\"metadata\":{\"durationUs\":");
+  Serial.print(durationUs);
+  Serial.print(",\"validDistance\":");
+  Serial.print(validDistance ? "true" : "false");
+  Serial.println("}}");
+}
+
+void sendNfcJson(const String& cardId, bool speakerTriggered, bool isEntry, int currentCount, bool validTag) {
+  Serial.print("{\"type\":\"nfc\",\"cardId\":\"");
+  Serial.print(cardId);
+  Serial.print("\",\"speakerTriggered\":");
+  Serial.print(speakerTriggered ? "true" : "false");
+  Serial.print(",\"metadata\":{\"mode\":\"");
+  Serial.print(isEntry ? "entry" : "exit");
+  Serial.print("\",\"vehicleCount\":");
+  Serial.print(currentCount);
+  Serial.print(",\"validTag\":");
+  Serial.print(validTag ? "true" : "false");
+  Serial.println("}}");
+}
 
 void setup() {
   Serial.begin(9600);
@@ -87,7 +122,16 @@ void loop() {
     noTone(buzzerPin);     // 부저 끄기
     // ★★★ 여기까지 ★★★
 
-    bool validTag = false; 
+    bool validTag = false;
+    String cardId = "";
+
+    for (byte i = 0; i < mfrc522.uid.size; i++) {
+      if (mfrc522.uid.uidByte[i] < 0x10) {
+        cardId += "0";
+      }
+      cardId += String(mfrc522.uid.uidByte[i], HEX);
+    }
+    cardId.toUpperCase();
 
     if (isEntryMode) {
       if (vehicleCount < maxCars) {
@@ -124,6 +168,8 @@ void loop() {
       gateServo.write(0);  
     }
 
+    sendNfcJson(cardId, true, isEntryMode, vehicleCount, validTag);
+
     mfrc522.PICC_HaltA(); 
     mfrc522.PCD_StopCrypto1();
   }
@@ -135,13 +181,19 @@ void loop() {
   delayMicroseconds(10);
   digitalWrite(trig, LOW);
 
-  float duration = pulseIn(echo, HIGH);
+  unsigned long duration = pulseIn(echo, HIGH);
   float distance = (duration * 340) / 10000.0 / 2.0;
 
-  if (distance < 10 && distance > 0) {
+  if (distance < THRESHOLD_CM && distance > 0) {
     digitalWrite(bLED, HIGH); // 파란 LED (7번핀)
   } else {
     digitalWrite(bLED, LOW);
+  }
+
+  if ((millis() - lastReadingSendMs) >= readingIntervalMs) {
+    bool ledState = distance > 0 && distance < THRESHOLD_CM;
+    sendReadingJson(distance, THRESHOLD_CM, ledState, duration);
+    lastReadingSendMs = millis();
   }
   
   delay(100);

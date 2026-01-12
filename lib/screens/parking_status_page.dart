@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:webui/model/parking_lot.dart';
-import 'package:webui/services/parking_api.dart';
-import 'package:webui/services/reservation_api.dart';
+import 'package:webui/model/sensor_reading.dart';
+import 'package:webui/services/sensor_api.dart';
 import 'package:webui/utils/constants.dart';
-import 'package:webui/widgets/parking_lot_card.dart';
+import 'package:webui/widgets/sensor_reading_card.dart';
 
 class ParkingStatusPage extends StatefulWidget {
   const ParkingStatusPage({super.key});
@@ -13,9 +12,8 @@ class ParkingStatusPage extends StatefulWidget {
 }
 
 class _ParkingStatusPageState extends State<ParkingStatusPage> {
-  final ParkingApiService _apiService = ParkingApiService();
-  final ReservationApiService _reservationService = ReservationApiService();
-  late Future<List<ParkingLot>> _lotsFuture;
+  final SensorApiService _sensorService = SensorApiService();
+  late Future<List<SensorReading>> _readingsFuture;
 
   @override
   void initState() {
@@ -25,52 +23,13 @@ class _ParkingStatusPageState extends State<ParkingStatusPage> {
 
   void _refreshData() {
     setState(() {
-      _lotsFuture = _apiService.getParkingLots();
+      _readingsFuture = _sensorService.getReadings();
     });
   }
 
-  void _handleReservation(String lotName) {
-    // 예약 로직 (기획서 기능)
-    final parentContext = context;
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text("주차 예약 확인"),
-        content: Text("$lotName 주차장을 예약하시겠습니까?\n(일정 시간 내 미입차 시 자동 취소)"),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: Text("취소")),
-          ElevatedButton(
-            onPressed: () async {
-              Navigator.pop(context);
-              try {
-                await _reservationService.createReservation(lotName);
-                if (!mounted) {
-                  return;
-                }
-                ScaffoldMessenger.of(parentContext).showSnackBar(
-                  SnackBar(
-                    content: Text("예약이 완료되었습니다."),
-                    backgroundColor: kPrimaryColor,
-                  ),
-                );
-              } catch (error) {
-                if (!mounted) {
-                  return;
-                }
-                ScaffoldMessenger.of(parentContext).showSnackBar(
-                  SnackBar(
-                    content: Text("예약에 실패했습니다."),
-                    backgroundColor: Colors.red,
-                  ),
-                );
-              }
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: kPrimaryColor),
-            child: Text("확인"),
-          ),
-        ],
-      ),
-    );
+  Future<void> _reloadData() async {
+    _refreshData();
+    await _readingsFuture;
   }
 
   @override
@@ -79,7 +38,7 @@ class _ParkingStatusPageState extends State<ParkingStatusPage> {
       backgroundColor: kBackgroundColor,
       appBar: AppBar(
         backgroundColor: kCardColor,
-        title: Text("실시간 주차 현황", style: TextStyle(color: kTextColor, fontWeight: FontWeight.bold)),
+        title: Text("실시간 센서 현황", style: TextStyle(color: kTextColor, fontWeight: FontWeight.bold)),
         elevation: 1,
         iconTheme: IconThemeData(color: kTextColor),
         actions: [
@@ -96,8 +55,8 @@ class _ParkingStatusPageState extends State<ParkingStatusPage> {
           ),
         ],
       ),
-      body: FutureBuilder<List<ParkingLot>>(
-        future: _lotsFuture,
+      body: FutureBuilder<List<SensorReading>>(
+        future: _readingsFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator(color: kPrimaryColor));
@@ -106,20 +65,21 @@ class _ParkingStatusPageState extends State<ParkingStatusPage> {
             return Center(child: Text("데이터를 불러오는데 실패했습니다."));
           }
           
-          final lots = snapshot.data!;
+          final readings = snapshot.data ?? [];
           
-          if (lots.isEmpty) {
-            return Center(child: Text("운영 중인 주차장이 없습니다."));
+          if (readings.isEmpty) {
+            return Center(child: Text("아직 센서 데이터가 없습니다."));
           }
 
-          return ListView.builder(
-            itemCount: lots.length,
-            itemBuilder: (context, index) {
-              return ParkingLotCard(
-                lot: lots[index],
-                onReservePressed: () => _handleReservation(lots[index].name),
-              );
-            },
+          return RefreshIndicator(
+            onRefresh: _reloadData,
+            child: ListView.builder(
+              physics: const AlwaysScrollableScrollPhysics(),
+              itemCount: readings.length,
+              itemBuilder: (context, index) {
+                return SensorReadingCard(reading: readings[index]);
+              },
+            ),
           );
         },
       ),

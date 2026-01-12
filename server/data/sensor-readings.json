@@ -1,1 +1,527 @@
-[]
+[
+  {
+    "id": "00cf2008-4e09-4020-8f6a-f91df6f1eb69",
+    "sensorId": "test-01",
+    "distanceCm": 5.5,
+    "thresholdCm": 10,
+    "ledState": true,
+    "createdAt": "2026-01-12T05:04:56.527Z",
+    "metadata": {}
+  },
+  {
+    "id": "d09307df-126e-46f9-ae1c-5a2a32ffc2ee",
+    "sensorId": "gate-01",
+    "distanceCm": 227,
+    "thresholdCm": 10,
+    "ledState": false,
+    "createdAt": "2026-01-12T05:38:44.870Z",
+    "metadata": {
+      "durationUs": 13351,
+      "validDistance": true
+    }
+  },
+  {
+    "id": "9c91f174-c5fe-4960-be35-dd8a550a7853",
+    "sensorId": "gate-01",
+    "distanceCm": 250.6,
+    "thresholdCm": 10,
+    "ledState": false,
+    "createdAt": "2026-01-12T05:38:46.019Z",
+    "metadata": {
+      "durationUs": 14742,
+      "validDistance": true
+    }
+  },
+  {
+    "id": "ac1f88c4-dc6c-4d24-8e97-2214c28669cc",
+    "sensorId": "gate-01",
+    "distanceCm": 225.8,
+    "thresholdCm": 10,
+    "ledState": false,
+    "createdAt": "2026-01-12T05:38:47.171Z",
+    "metadata": {
+      "durationUs": 13282,
+      "validDistance": true
+    }
+  },
+  {
+    "id": "0a1d5838-10d3-44ab-a1be-bca4b04f88a9",
+    "sensorId": "gate-01",
+    "distanceCm": 161.7,
+    "thresholdCm": 10,
+    "ledState": false,
+    "createdAt": "2026-01-12T05:38:48.307Z",
+    "metadata": {
+      "durationUs": 9509,
+      "validDistance": true
+    }
+  },
+  {
+    "id": "2732c99b-f487-4b07-9dda-cf020b4684a9",
+    "sensorId": "gate-01",
+    "distanceCm": 226.2,
+    "thresholdCm": 10,
+    "ledState": false,
+    "createdAt": "2026-01-12T05:38:49.450Z",
+    "metadata": {
+      "durationUs": 13304,
+      "validDistance": true
+    }
+  },
+  {
+    "id": "be8024a7-915c-4b9b-bdbc-a909799e1549",
+    "sensorId": "gate-01",
+    "distanceCm": 226.8,
+    "thresholdCm": 10,
+    "ledState": false,
+    "createdAt": "2026-01-12T05:38:50.576Z",
+    "metadata": {
+      "durationUs": 13340,
+      "validDistance": true
+    }
+  },
+  {
+    "id": "91925ada-c454-400c-97fe-50211c15a16c",
+    "sensorId": "gate-01",
+    "distanceCm": 202.1,
+    "thresholdCm": 10,
+    "ledState": false,
+    "createdAt": "2026-01-12T05:38:51.710Z",
+    "metadata": {
+      "durationUs": 11886,
+      "validDistance": true
+    }
+  },
+  {
+    "id": "eed4fe65-5187-40cd-aa6d-9406bc0feb7f",
+    "sensorId": "gate-01",
+    "distanceCm": 208.4,
+    "thresholdCm": 10,
+    "ledState": false,
+    "createdAt": "2026-01-12T05:38:52.847Z",
+    "metadata": {
+      "durationUs": 12260,
+      "validDistance": true
+    }
+  },
+  {
+    "id": "d871bc47-6e6c-434e-bf8d-af2a3988613d",
+    "sensorId": "gate-01",
+    "distanceCm": 225.9,
+    "thresholdCm": 10,
+    "ledState": false,
+    "createdAt": "2026-01-12T05:38:54.003Z",
+    "metadata": {
+      "durationUs": 13290,
+      "validDistance": true
+    }
+  },
+  {
+    "id": "c2c72fef-c33a-4878-bc5a-af00a6492678",
+    "sensorId": "gate-01",
+    "distanceCm": 250.3,
+    "thresholdCm": 10,
+    "ledState": false,
+    "createdAt": "2026-01-12T05:38:55.142Z",
+    "metadata": {
+      "durationUs": 14724,
+      "validDistance": true
+    }
+  },
+  {
+    "id": "a4a006e9-1636-42f1-85d3-02bdc8e3f024",
+    "sensorId": "gate-01",
+    "distanceCm": 225.2,
+    "thresholdCm": 10,
+    "ledState": false,
+    "createdAt": "2026-01-12T05:38:56.292Z",
+    "metadata": {
+      "durationUs": 13246,
+      "validDistance": true
+    }
+  },
+  {
+    "id": "14c62049-6b1e-4ba5-a9ee-fb2563cc02d0",
+    "sensorId": "gate-01",
+    "distanceCm": 225.3,
+    "thresholdCm": 10,
+    "ledState": false,
+    "createdAt": "2026-01-12T05:38:57.443Z",
+    "metadata": {
+      "durationUs": 13250,
+      "validDistance": true
+    }
+  },
+  {
+    "id": "1d436bd0-3716-434a-b6d2-be182d67e16f",
+    "sensorId": "gate-01",
+    "distanceCm": 161.3,
+    "thresholdCm": 10,
+    "ledState": false,
+    "createdAt": "2026-01-12T05:38:58.579Z",
+    "metadata": {
+      "durationUs": 9487,
+      "validDistance": true
+    }
+  },
+  {
+    "id": "09d28680-e87d-4732-a91f-07fa285b0731",
+    "sensorId": "gate-01",
+    "distanceCm": 250.6,
+    "thresholdCm": 10,
+    "ledState": false,
+    "createdAt": "2026-01-12T05:38:59.729Z",
+    "metadata": {
+      "durationUs": 14739,
+      "validDistance": true
+    }
+  },
+  {
+    "id": "fd0447cc-f0f0-4826-b455-7889e85d511c",
+    "sensorId": "gate-01",
+    "distanceCm": 251.4,
+    "thresholdCm": 10,
+    "ledState": false,
+    "createdAt": "2026-01-12T05:39:00.889Z",
+    "metadata": {
+      "durationUs": 14790,
+      "validDistance": true
+    }
+  },
+  {
+    "id": "4aa0f84c-aca4-4827-8ab4-498011b0129d",
+    "sensorId": "gate-01",
+    "distanceCm": 251,
+    "thresholdCm": 10,
+    "ledState": false,
+    "createdAt": "2026-01-12T05:39:02.049Z",
+    "metadata": {
+      "durationUs": 14763,
+      "validDistance": true
+    }
+  },
+  {
+    "id": "43e0c0c1-61ba-4be0-84fe-3705712b0b0d",
+    "sensorId": "gate-01",
+    "distanceCm": 160.9,
+    "thresholdCm": 10,
+    "ledState": false,
+    "createdAt": "2026-01-12T05:39:03.179Z",
+    "metadata": {
+      "durationUs": 9464,
+      "validDistance": true
+    }
+  },
+  {
+    "id": "78d8dc8e-a3ea-449b-b68b-9b146797824d",
+    "sensorId": "gate-01",
+    "distanceCm": 159.9,
+    "thresholdCm": 10,
+    "ledState": false,
+    "createdAt": "2026-01-12T05:39:04.302Z",
+    "metadata": {
+      "durationUs": 9405,
+      "validDistance": true
+    }
+  },
+  {
+    "id": "225a2b3e-5553-4029-812a-89cdd2ff7994",
+    "sensorId": "gate-01",
+    "distanceCm": 226.7,
+    "thresholdCm": 10,
+    "ledState": false,
+    "createdAt": "2026-01-12T05:39:05.439Z",
+    "metadata": {
+      "durationUs": 13338,
+      "validDistance": true
+    }
+  },
+  {
+    "id": "8914d7f4-ae6e-494e-bbe2-c0a576743fb1",
+    "sensorId": "gate-01",
+    "distanceCm": 3.1,
+    "thresholdCm": 10,
+    "ledState": true,
+    "createdAt": "2026-01-12T05:39:06.558Z",
+    "metadata": {
+      "durationUs": 180,
+      "validDistance": true
+    }
+  },
+  {
+    "id": "fa97e87c-56f1-47c1-9b86-0077ef139c0c",
+    "sensorId": "gate-01",
+    "distanceCm": 3.1,
+    "thresholdCm": 10,
+    "ledState": true,
+    "createdAt": "2026-01-12T05:39:07.744Z",
+    "metadata": {
+      "durationUs": 180,
+      "validDistance": true
+    }
+  },
+  {
+    "id": "4e8ff73c-a3cd-4eba-981b-7fccb886a679",
+    "sensorId": "gate-01",
+    "distanceCm": 2.7,
+    "thresholdCm": 10,
+    "ledState": true,
+    "createdAt": "2026-01-12T05:39:08.948Z",
+    "metadata": {
+      "durationUs": 161,
+      "validDistance": true
+    }
+  },
+  {
+    "id": "cd2dc30f-175b-4859-a0b0-0e0b7f20ca63",
+    "sensorId": "gate-01",
+    "distanceCm": 4,
+    "thresholdCm": 10,
+    "ledState": true,
+    "createdAt": "2026-01-12T05:39:10.140Z",
+    "metadata": {
+      "durationUs": 237,
+      "validDistance": true
+    }
+  },
+  {
+    "id": "fbb8d834-9029-4b0d-8eac-8dce2be666c8",
+    "sensorId": "gate-01",
+    "distanceCm": 251,
+    "thresholdCm": 10,
+    "ledState": false,
+    "createdAt": "2026-01-12T05:39:11.274Z",
+    "metadata": {
+      "durationUs": 14765,
+      "validDistance": true
+    }
+  },
+  {
+    "id": "e630533e-0434-443e-ac9f-8e9ce8b207ca",
+    "sensorId": "gate-01",
+    "distanceCm": 203,
+    "thresholdCm": 10,
+    "ledState": false,
+    "createdAt": "2026-01-12T05:39:12.398Z",
+    "metadata": {
+      "durationUs": 11939,
+      "validDistance": true
+    }
+  },
+  {
+    "id": "e47175b7-14c3-47ea-a02d-35cb07f7f103",
+    "sensorId": "gate-01",
+    "distanceCm": 225.1,
+    "thresholdCm": 10,
+    "ledState": false,
+    "createdAt": "2026-01-12T05:39:13.539Z",
+    "metadata": {
+      "durationUs": 13240,
+      "validDistance": true
+    }
+  },
+  {
+    "id": "cb6e5fd2-9ac7-42f5-bed6-6696b4ed77ac",
+    "sensorId": "gate-01",
+    "distanceCm": 208.8,
+    "thresholdCm": 10,
+    "ledState": false,
+    "createdAt": "2026-01-12T05:39:14.689Z",
+    "metadata": {
+      "durationUs": 12280,
+      "validDistance": true
+    }
+  },
+  {
+    "id": "aa1ee60d-a64c-47e2-a4c8-82bd12a86840",
+    "sensorId": "gate-01",
+    "distanceCm": 164.4,
+    "thresholdCm": 10,
+    "ledState": false,
+    "createdAt": "2026-01-12T05:39:15.832Z",
+    "metadata": {
+      "durationUs": 9672,
+      "validDistance": true
+    }
+  },
+  {
+    "id": "917f9b28-4bee-44fc-a354-aba815ae9bf5",
+    "sensorId": "gate-01",
+    "distanceCm": 228.1,
+    "thresholdCm": 10,
+    "ledState": false,
+    "createdAt": "2026-01-12T05:39:16.989Z",
+    "metadata": {
+      "durationUs": 13416,
+      "validDistance": true
+    }
+  },
+  {
+    "id": "61363033-ad67-413c-94de-206a974bde49",
+    "sensorId": "gate-01",
+    "distanceCm": 250.6,
+    "thresholdCm": 10,
+    "ledState": false,
+    "createdAt": "2026-01-12T05:39:18.147Z",
+    "metadata": {
+      "durationUs": 14740,
+      "validDistance": true
+    }
+  },
+  {
+    "id": "fa13c08b-d67c-4125-b428-40da4b9990b2",
+    "sensorId": "gate-01",
+    "distanceCm": 250.9,
+    "thresholdCm": 10,
+    "ledState": false,
+    "createdAt": "2026-01-12T05:39:19.306Z",
+    "metadata": {
+      "durationUs": 14761,
+      "validDistance": true
+    }
+  },
+  {
+    "id": "a03dd17c-4ac0-4fe7-bfe2-6c7aa2e3ce1a",
+    "sensorId": "gate-01",
+    "distanceCm": 251.4,
+    "thresholdCm": 10,
+    "ledState": false,
+    "createdAt": "2026-01-12T05:39:20.468Z",
+    "metadata": {
+      "durationUs": 14787,
+      "validDistance": true
+    }
+  },
+  {
+    "id": "a2800e2f-77a9-44a5-8bde-421e9f87325e",
+    "sensorId": "gate-01",
+    "distanceCm": 251,
+    "thresholdCm": 10,
+    "ledState": false,
+    "createdAt": "2026-01-12T05:39:21.624Z",
+    "metadata": {
+      "durationUs": 14765,
+      "validDistance": true
+    }
+  },
+  {
+    "id": "0e68c572-6db2-4dff-8757-d369cd0df545",
+    "sensorId": "gate-01",
+    "distanceCm": 224.8,
+    "thresholdCm": 10,
+    "ledState": false,
+    "createdAt": "2026-01-12T05:39:22.785Z",
+    "metadata": {
+      "durationUs": 13225,
+      "validDistance": true
+    }
+  },
+  {
+    "id": "5ab7c412-65a4-466f-9c7c-388d07a3f1c0",
+    "sensorId": "gate-01",
+    "distanceCm": 160,
+    "thresholdCm": 10,
+    "ledState": false,
+    "createdAt": "2026-01-12T05:39:23.932Z",
+    "metadata": {
+      "durationUs": 9410,
+      "validDistance": true
+    }
+  },
+  {
+    "id": "b4b72f6a-c482-47a7-9bf4-af84a1619ac1",
+    "sensorId": "gate-01",
+    "distanceCm": 163.3,
+    "thresholdCm": 10,
+    "ledState": false,
+    "createdAt": "2026-01-12T05:39:25.069Z",
+    "metadata": {
+      "durationUs": 9607,
+      "validDistance": true
+    }
+  },
+  {
+    "id": "c8ff31a1-3364-47b7-904c-7c011e2ed6c8",
+    "sensorId": "gate-01",
+    "distanceCm": 250.9,
+    "thresholdCm": 10,
+    "ledState": false,
+    "createdAt": "2026-01-12T05:39:26.219Z",
+    "metadata": {
+      "durationUs": 14756,
+      "validDistance": true
+    }
+  },
+  {
+    "id": "07c2d934-d392-4a7b-a665-6b518fec703a",
+    "sensorId": "gate-01",
+    "distanceCm": 251.1,
+    "thresholdCm": 10,
+    "ledState": false,
+    "createdAt": "2026-01-12T05:39:27.367Z",
+    "metadata": {
+      "durationUs": 14769,
+      "validDistance": true
+    }
+  },
+  {
+    "id": "ee292389-04e1-45ac-a5e6-ff5116ab3496",
+    "sensorId": "gate-01",
+    "distanceCm": 223.8,
+    "thresholdCm": 10,
+    "ledState": false,
+    "createdAt": "2026-01-12T05:39:28.524Z",
+    "metadata": {
+      "durationUs": 13166,
+      "validDistance": true
+    }
+  },
+  {
+    "id": "9cb9fbcf-1dc5-46c1-945b-ac2d23d2fe74",
+    "sensorId": "gate-01",
+    "distanceCm": 224.8,
+    "thresholdCm": 10,
+    "ledState": false,
+    "createdAt": "2026-01-12T05:39:29.652Z",
+    "metadata": {
+      "durationUs": 13226,
+      "validDistance": true
+    }
+  },
+  {
+    "id": "eb1287cd-7d61-483a-87d3-b9447bea3da4",
+    "sensorId": "gate-01",
+    "distanceCm": 225,
+    "thresholdCm": 10,
+    "ledState": false,
+    "createdAt": "2026-01-12T05:39:30.791Z",
+    "metadata": {
+      "durationUs": 13236,
+      "validDistance": true
+    }
+  },
+  {
+    "id": "c51dfcd9-ddfb-4b30-99e0-6841e3aa0670",
+    "sensorId": "gate-01",
+    "distanceCm": 202.8,
+    "thresholdCm": 10,
+    "ledState": false,
+    "createdAt": "2026-01-12T05:39:31.933Z",
+    "metadata": {
+      "durationUs": 11930,
+      "validDistance": true
+    }
+  },
+  {
+    "id": "37de5701-b07f-473d-a60a-c5f83abc52b1",
+    "sensorId": "gate-01",
+    "distanceCm": 208.1,
+    "thresholdCm": 10,
+    "ledState": false,
+    "createdAt": "2026-01-12T05:39:33.076Z",
+    "metadata": {
+      "durationUs": 12244,
+      "validDistance": true
+    }
+  }
+]
