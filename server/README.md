@@ -31,11 +31,14 @@ server/
 | Method | Endpoint                 | 설명 |
 |--------|--------------------------|------|
 | GET    | `/health`                | 서버 상태 확인 |
-| POST   | `/auth/register`         | 회원가입 |
+| POST   | `/api/users`             | 회원가입 (사용자 생성) |
 | POST   | `/auth/login`            | 로그인 |
 | GET    | `/auth/verify`           | 토큰 검증 |
-| GET    | `/api/profile`           | 내 프로필 조회 |
-| PUT    | `/api/profile`           | 차량 번호 업데이트 |
+| GET    | `/api/users/me`          | 내 계정 조회 |
+| PUT    | `/api/users/me`          | 내 계정 업데이트 |
+| DELETE | `/api/users/me`          | 내 계정 삭제 |
+| GET    | `/api/profile`           | 내 프로필 조회 (호환용) |
+| PUT    | `/api/profile`           | 차량 번호 업데이트 (호환용) |
 | GET    | `/api/notification-settings` | 알림 설정 조회 |
 | PUT    | `/api/notification-settings` | 알림 설정 업데이트 |
 | GET    | `/api/reservations`      | 내 예약 목록 조회 |

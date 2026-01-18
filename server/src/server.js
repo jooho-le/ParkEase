@@ -385,6 +385,66 @@ class UserRepository {
     );
     return await this.getById(id);
   }
+
+  async update(id, { name, userType, carNumber, password }) {
+    const updates = [];
+    const params = [];
+
+    if (name !== undefined) {
+      updates.push('name = ?');
+      params.push(name);
+    }
+
+    if (userType !== undefined) {
+      updates.push('user_type = ?');
+      params.push(userType);
+    }
+
+    if (carNumber !== undefined) {
+      updates.push('car_number = ?');
+      params.push(carNumber ?? null);
+    }
+
+    if (password !== undefined) {
+      const salt = randomBytes(16).toString('hex');
+      const passwordHash = hashPassword(password, salt);
+      updates.push('password_hash = ?');
+      params.push(passwordHash);
+      updates.push('password_salt = ?');
+      params.push(salt);
+    }
+
+    if (updates.length === 0) {
+      return await this.getById(id);
+    }
+
+    const now = new Date().toISOString();
+    updates.push('updated_at = ?');
+    params.push(now);
+    params.push(id);
+
+    await this.db.run(
+      `
+      UPDATE users
+      SET ${updates.join(', ')}
+      WHERE id = ?
+    `,
+      params
+    );
+
+    return await this.getById(id);
+  }
+
+  async remove(id) {
+    const result = await this.db.run(
+      `
+      DELETE FROM users
+      WHERE id = ?
+    `,
+      [id]
+    );
+    return result.changes > 0;
+  }
 }
 
 class TokenRepository {
@@ -421,6 +481,16 @@ class TokenRepository {
       [record.token, record.userId, record.createdAt]
     );
     return record;
+  }
+
+  async removeByUserId(userId) {
+    await this.db.run(
+      `
+      DELETE FROM tokens
+      WHERE user_id = ?
+    `,
+      [userId]
+    );
   }
 }
 
@@ -608,9 +678,9 @@ async function handleRequest(req, res) {
       return;
     }
 
-    if (req.method === 'POST' && pathname === '/auth/register') {
+    if (req.method === 'POST' && pathname === '/api/users') {
       const body = await parseJsonBody(req);
-      const validationError = validateRegisterPayload(body);
+      const validationError = validateUserCreatePayload(body);
       if (validationError) {
         sendError(res, 400, validationError);
         return;
@@ -662,6 +732,42 @@ async function handleRequest(req, res) {
       return;
     }
 
+    if (pathname === '/api/users/me') {
+      const user = await requireUser(req, res);
+      if (!user) {
+        return;
+      }
+
+      if (req.method === 'GET') {
+        sendJson(res, 200, { user: sanitizeUser(user) });
+        return;
+      }
+
+      if (req.method === 'PUT') {
+        const body = await parseJsonBody(req);
+        const validationError = validateUserUpdatePayload(body);
+        if (validationError) {
+          sendError(res, 400, validationError);
+          return;
+        }
+
+        const updatedUser = await userRepository.update(user.id, body);
+        sendJson(res, 200, { user: sanitizeUser(updatedUser) });
+        return;
+      }
+
+      if (req.method === 'DELETE') {
+        await tokenRepository.removeByUserId(user.id);
+        const removed = await userRepository.remove(user.id);
+        if (!removed) {
+          sendError(res, 404, '사용자를 찾을 수 없습니다.');
+          return;
+        }
+        sendJson(res, 200, { success: true });
+        return;
+      }
+    }
+
     if (pathname === '/api/profile') {
       const user = await requireUser(req, res);
       if (!user) {
@@ -681,10 +787,9 @@ async function handleRequest(req, res) {
           return;
         }
 
-        const updatedUser = await userRepository.updateCarNumber(
-          user.id,
-          body.carNumber ?? null
-        );
+        const updatedUser = await userRepository.update(user.id, {
+          carNumber: body.carNumber ?? null,
+        });
         sendJson(res, 200, { user: sanitizeUser(updatedUser) });
         return;
       }
@@ -960,7 +1065,7 @@ function validateNotificationSettingsPayload(body) {
   return null;
 }
 
-function validateRegisterPayload(body) {
+function validateUserCreatePayload(body) {
   if (!body || typeof body !== 'object') {
     return 'JSON 형식의 데이터가 필요합니다.';
   }
@@ -983,6 +1088,40 @@ function validateRegisterPayload(body) {
 
   if (body.carNumber && typeof body.carNumber !== 'string') {
     return 'carNumber (문자열) 필드가 필요합니다.';
+  }
+
+  return null;
+}
+
+function validateUserUpdatePayload(body) {
+  if (!body || typeof body !== 'object') {
+    return 'JSON 형식의 데이터가 필요합니다.';
+  }
+
+  const allowedKeys = ['name', 'userType', 'carNumber', 'password'];
+  const hasAny = allowedKeys.some((key) => Object.prototype.hasOwnProperty.call(body, key));
+  if (!hasAny) {
+    return '업데이트할 필드가 필요합니다.';
+  }
+
+  if (body.name !== undefined && typeof body.name !== 'string') {
+    return 'name (문자열) 필드가 필요합니다.';
+  }
+
+  if (body.userType !== undefined && typeof body.userType !== 'string') {
+    return 'userType (문자열) 필드가 필요합니다.';
+  }
+
+  if (
+    body.carNumber !== undefined &&
+    body.carNumber !== null &&
+    typeof body.carNumber !== 'string'
+  ) {
+    return 'carNumber (문자열) 필드가 필요합니다.';
+  }
+
+  if (body.password !== undefined && typeof body.password !== 'string') {
+    return 'password (문자열) 필드가 필요합니다.';
   }
 
   return null;
