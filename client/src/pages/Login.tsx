@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { mockAuthLogin, mockAuthRegister } from '../api/mockServer';
+import { loginUser, registerUser } from '../api/server';
 import { useAuthStore } from '../store/auth';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -17,6 +17,11 @@ export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
+  const mapServerUser = (serverUser: { id: string; name: string; userType?: string }) => ({
+    id: serverUser.id,
+    name: serverUser.name,
+    role: serverUser.userType === 'STAFF' ? 'STAFF' : 'STUDENT',
+  });
   const scrollTo = (id: string) => {
     const target = document.getElementById(id);
     if (target) {
@@ -27,9 +32,10 @@ export default function LoginPage() {
   const handleLogin = async () => {
     try {
       setLoading(true);
-      const result = await mockAuthLogin(role);
-      login(result.user, result.token);
-      toast({ title: '로그인 성공', description: `${result.user.name}님 환영합니다.` });
+      const result = await loginUser({ id: email.trim(), password });
+      const mappedUser = mapServerUser(result.user);
+      login(mappedUser, result.token);
+      toast({ title: '로그인 성공', description: `${mappedUser.name}님 환영합니다.` });
       navigate('/');
     } catch (error) {
       toast({ title: '로그인 실패', description: '다시 시도해주세요.', variant: 'destructive' });
@@ -45,9 +51,16 @@ export default function LoginPage() {
     }
     try {
       setLoading(true);
-      const result = await mockAuthRegister({ name: name.trim(), role });
-      login(result.user, result.token);
-      toast({ title: '회원가입 완료', description: `${result.user.name}님 환영합니다.` });
+      const result = await registerUser({
+        id: email.trim(),
+        password,
+        name: name.trim(),
+        userType: role,
+        carNumber: null,
+      });
+      const mappedUser = mapServerUser(result.user);
+      login(mappedUser, result.token);
+      toast({ title: '회원가입 완료', description: `${mappedUser.name}님 환영합니다.` });
       navigate('/');
     } catch (error) {
       toast({ title: '회원가입 실패', description: '다시 시도해주세요.', variant: 'destructive' });

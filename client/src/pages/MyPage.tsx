@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useEffect, useMemo, useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import AppShell from '../components/layout/AppShell';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
@@ -7,21 +7,48 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import { Switch } from '../components/ui/switch';
 import { useToast } from '../components/ui/use-toast';
 import Countdown from '../components/Countdown';
-import { cancelReservation, confirmEntry, getMyReservations, getParkingLots } from '../api/mockServer';
+import { getParkingLots } from '../api/mockServer';
+import {
+  cancelReservation,
+  deleteMe,
+  getMe,
+  getNotificationSettings,
+  getReservations,
+  updateMe,
+  updateNotificationSettings,
+} from '../api/server';
 import { useAuthStore } from '../store/auth';
+import { Input } from '../components/ui/input';
 
 export default function MyPage() {
-  const { user } = useAuthStore();
+  const { user, token, login, logout } = useAuthStore();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [alertsEnabled, setAlertsEnabled] = useState(true);
+  const [marketingEnabled, setMarketingEnabled] = useState(false);
   const [favorites, setFavorites] = useState<string[]>(['lot-a']);
+  const [profileName, setProfileName] = useState('');
+  const [profileUserType, setProfileUserType] = useState<'STUDENT' | 'STAFF'>('STUDENT');
+  const [carNumber, setCarNumber] = useState('');
+  const [newPassword, setNewPassword] = useState('');
 
-  const { data: reservations = [] } = useQuery({
-    queryKey: ['myReservations', user?.id],
-    queryFn: () => getMyReservations(user?.id ?? ''),
-    enabled: Boolean(user?.id),
+  const { data: meData } = useQuery({
+    queryKey: ['me', token],
+    queryFn: () => getMe(token || ''),
+    enabled: Boolean(token),
+  });
+
+  const { data: reservationsData } = useQuery({
+    queryKey: ['myReservations', token],
+    queryFn: () => getReservations(token || ''),
+    enabled: Boolean(token),
     refetchInterval: 5000,
+  });
+
+  const { data: notificationData } = useQuery({
+    queryKey: ['notificationSettings', token],
+    queryFn: () => getNotificationSettings(token || ''),
+    enabled: Boolean(token),
   });
 
   const { data: lots = [] } = useQuery({
@@ -29,39 +56,112 @@ export default function MyPage() {
     queryFn: getParkingLots,
   });
 
+  useEffect(() => {
+    if (meData?.user) {
+      setProfileName(meData.user.name ?? '');
+      setProfileUserType(meData.user.userType === 'STAFF' ? 'STAFF' : 'STUDENT');
+      setCarNumber(meData.user.carNumber ?? '');
+    }
+  }, [meData]);
+
+  useEffect(() => {
+    if (notificationData) {
+      setAlertsEnabled(Boolean(notificationData.pushEnabled));
+      setMarketingEnabled(Boolean(notificationData.marketingEnabled));
+    }
+  }, [notificationData]);
+
+  const reservations = reservationsData?.data ?? [];
+
   const current = useMemo(
-    () => reservations.find((res) => res.status === 'HELD' || res.status === 'ACTIVE'),
+    () => reservations.find((res) => res.status === 'active'),
     [reservations]
   );
 
   const history = useMemo(
-    () => reservations.filter((res) => res.status !== 'HELD' && res.status !== 'ACTIVE'),
+    () => reservations.filter((res) => res.status !== 'active'),
     [reservations]
   );
 
   const statusLabel = (status: string) => {
     switch (status) {
-      case 'HELD':
-        return '홀드';
-      case 'ACTIVE':
+      case 'active':
         return '활성';
-      case 'COMPLETED':
-        return '완료';
-      case 'EXPIRED':
-        return '만료';
-      case 'CANCELLED':
+      case 'cancelled':
         return '취소';
+      case 'expired':
+        return '만료';
       default:
         return status;
     }
   };
 
+  const updateMutation = useMutation({
+    mutationFn: () =>
+      updateMe(token || '', {
+        name: profileName.trim(),
+        userType: profileUserType,
+        carNumber: carNumber.trim() || null,
+        password: newPassword ? newPassword : undefined,
+      }),
+    onSuccess: (data) => {
+      login(
+        {
+          id: data.user.id,
+          name: data.user.name,
+          role: data.user.userType === 'STAFF' ? 'STAFF' : 'STUDENT',
+        },
+        token || ''
+      );
+      setNewPassword('');
+      toast({ title: '내 정보가 저장되었습니다.' });
+      queryClient.invalidateQueries({ queryKey: ['me', token] });
+    },
+    onError: (error) => {
+      toast({
+        title: '저장 실패',
+        description: (error as Error).message,
+        variant: 'destructive',
+      });
+    },
+  });
+
+  const notificationMutation = useMutation({
+    mutationFn: (payload: { pushEnabled: boolean; marketingEnabled: boolean }) =>
+      updateNotificationSettings(token || '', payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['notificationSettings', token] });
+    },
+    onError: (error) => {
+      toast({
+        title: '알림 설정 저장 실패',
+        description: (error as Error).message,
+        variant: 'destructive',
+      });
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: () => deleteMe(token || ''),
+    onSuccess: () => {
+      toast({ title: '계정이 삭제되었습니다.' });
+      logout();
+    },
+    onError: (error) => {
+      toast({
+        title: '삭제 실패',
+        description: (error as Error).message,
+        variant: 'destructive',
+      });
+    },
+  });
+
   const handleCancel = async () => {
     if (!current) return;
     try {
-      await cancelReservation(current.id);
+      await cancelReservation(token || '', current.id);
       toast({ title: '예약이 취소되었습니다.' });
-      queryClient.invalidateQueries({ queryKey: ['myReservations', user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['myReservations', token] });
     } catch (error) {
       toast({
         title: '취소 실패',
@@ -71,23 +171,69 @@ export default function MyPage() {
     }
   };
 
-  const handleConfirm = async () => {
-    if (!current) return;
-    try {
-      await confirmEntry(current.id);
-      toast({ title: '입차 완료', description: '예약이 완료되었습니다.' });
-      queryClient.invalidateQueries({ queryKey: ['myReservations', user?.id] });
-    } catch (error) {
-      toast({
-        title: '입차 처리 실패',
-        description: (error as Error).message,
-        variant: 'destructive',
-      });
-    }
-  };
-
   return (
     <AppShell>
+      <Card>
+        <CardHeader>
+          <CardTitle>내 정보</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid gap-3 md:grid-cols-2">
+            <div className="space-y-2">
+              <p className="text-xs text-slate-500">이름</p>
+              <Input value={profileName} onChange={(event) => setProfileName(event.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <p className="text-xs text-slate-500">사용자 유형</p>
+              <div className="flex gap-2">
+                <Button
+                  variant={profileUserType === 'STUDENT' ? 'default' : 'outline'}
+                  onClick={() => setProfileUserType('STUDENT')}
+                  className="flex-1"
+                >
+                  학생
+                </Button>
+                <Button
+                  variant={profileUserType === 'STAFF' ? 'default' : 'outline'}
+                  onClick={() => setProfileUserType('STAFF')}
+                  className="flex-1"
+                >
+                  교직원
+                </Button>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <p className="text-xs text-slate-500">차량 번호</p>
+              <Input value={carNumber} onChange={(event) => setCarNumber(event.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <p className="text-xs text-slate-500">새 비밀번호</p>
+              <Input
+                type="password"
+                value={newPassword}
+                onChange={(event) => setNewPassword(event.target.value)}
+                placeholder="변경 시에만 입력"
+              />
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-3">
+            <Button onClick={() => updateMutation.mutate()} disabled={updateMutation.isPending}>
+              {updateMutation.isPending ? '저장 중...' : '저장'}
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => deleteMutation.mutate()}
+              disabled={deleteMutation.isPending}
+            >
+              계정 삭제
+            </Button>
+          </div>
+          {user && (
+            <p className="text-xs text-slate-400">아이디: {user.id}</p>
+          )}
+        </CardContent>
+      </Card>
+
       <Card>
         <CardHeader>
           <CardTitle>현재 예약</CardTitle>
@@ -99,12 +245,11 @@ export default function MyPage() {
                 <div>
                   <p className="text-sm text-slate-500">홀드 만료까지</p>
                   <p className="text-2xl font-semibold">
-                    <Countdown target={current.holdExpiresAt} />
+                    <Countdown target={current.expiresAt} />
                   </p>
                 </div>
                 <div className="flex gap-2">
                   <Button variant="outline" onClick={handleCancel}>취소</Button>
-                  <Button onClick={handleConfirm}>입차 완료</Button>
                 </div>
               </div>
               <p className="text-sm text-slate-600">예약 ID: {current.id}</p>
@@ -152,7 +297,29 @@ export default function MyPage() {
         <CardContent className="space-y-4">
           <label className="flex items-center justify-between text-sm text-slate-600">
             만석 {'\u2192'} 여석 알림
-            <Switch checked={alertsEnabled} onCheckedChange={setAlertsEnabled} />
+            <Switch
+              checked={alertsEnabled}
+              onCheckedChange={(checked) => {
+                setAlertsEnabled(checked);
+                notificationMutation.mutate({
+                  pushEnabled: checked,
+                  marketingEnabled,
+                });
+              }}
+            />
+          </label>
+          <label className="flex items-center justify-between text-sm text-slate-600">
+            이벤트/공지 알림
+            <Switch
+              checked={marketingEnabled}
+              onCheckedChange={(checked) => {
+                setMarketingEnabled(checked);
+                notificationMutation.mutate({
+                  pushEnabled: alertsEnabled,
+                  marketingEnabled: checked,
+                });
+              }}
+            />
           </label>
 
           <div className="space-y-2">
