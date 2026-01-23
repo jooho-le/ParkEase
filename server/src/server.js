@@ -509,7 +509,41 @@ class ReservationRepository {
     this.db = db;
   }
 
+  async expireForUser(userId) {
+    const now = new Date().toISOString();
+    await this.db.run(
+      `
+      UPDATE reservations
+      SET status = ?, updated_at = ?
+      WHERE user_id = ? AND status = ? AND expires_at < ?
+    `,
+      ['expired', now, userId, 'active', now]
+    );
+  }
+
+  async getActiveForUser(userId) {
+    await this.expireForUser(userId);
+    const row = await this.db.get(
+      `
+      SELECT
+        id,
+        lot_name as lotName,
+        status,
+        created_at as createdAt,
+        expires_at as expiresAt,
+        updated_at as updatedAt
+      FROM reservations
+      WHERE user_id = ? AND status = ?
+      ORDER BY created_at DESC
+      LIMIT 1
+    `,
+      [userId, 'active']
+    );
+    return row ?? null;
+  }
+
   async getByIdForUser(userId, id) {
+    await this.expireForUser(userId);
     const row = await this.db.get(
       `
       SELECT
@@ -528,6 +562,7 @@ class ReservationRepository {
   }
 
   async getAllForUser(userId) {
+    await this.expireForUser(userId);
     return await this.db.all(
       `
       SELECT
@@ -546,6 +581,10 @@ class ReservationRepository {
   }
 
   async create({ userId, lotName }) {
+    const existing = await this.getActiveForUser(userId);
+    if (existing) {
+      return null;
+    }
     const now = new Date();
     const record = {
       id: randomUUID(),
@@ -591,6 +630,22 @@ class ReservationRepository {
       WHERE id = ? AND user_id = ? AND status = ?
     `,
       ['cancelled', now, id, userId, 'active']
+    );
+    if (result.changes === 0) {
+      return null;
+    }
+    return await this.getByIdForUser(userId, id);
+  }
+
+  async confirm(userId, id) {
+    const now = new Date().toISOString();
+    const result = await this.db.run(
+      `
+      UPDATE reservations
+      SET status = ?, updated_at = ?
+      WHERE id = ? AND user_id = ? AND status = ?
+    `,
+      ['completed', now, id, userId, 'active']
     );
     if (result.changes === 0) {
       return null;
@@ -930,6 +985,10 @@ async function handleRequest(req, res) {
           userId: user.id,
           lotName: body.lotName,
         });
+        if (!record) {
+          sendError(res, 409, '이미 진행 중인 예약이 있습니다.');
+          return;
+        }
         sendJson(res, 201, toReservationResponse(record));
         return;
       }
@@ -942,8 +1001,21 @@ async function handleRequest(req, res) {
       }
 
       const segments = getPathSegments(pathname);
-      if (segments.length === 2) {
-        const id = segments[1];
+      if (segments.length === 4 && segments[3] === 'confirm') {
+        const id = segments[2];
+        if (req.method === 'POST') {
+          const record = await reservationRepository.confirm(user.id, id);
+          if (!record) {
+            sendError(res, 404, '입차 완료 처리할 예약이 없습니다.');
+            return;
+          }
+          sendJson(res, 200, toReservationResponse(record));
+          return;
+        }
+      }
+
+      if (segments.length === 3) {
+        const id = segments[2];
         if (req.method === 'GET') {
           const record = await reservationRepository.getByIdForUser(user.id, id);
           if (!record) {

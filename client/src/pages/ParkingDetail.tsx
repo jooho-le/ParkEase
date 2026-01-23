@@ -10,7 +10,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { Skeleton } from '../components/ui/skeleton';
 import { useToast } from '../components/ui/use-toast';
-import { createReservation, getParkingLot } from '../api/mockServer';
+import { getParkingLot } from '../api/mockServer';
+import { createReservation } from '../api/server';
 import { useAuthStore } from '../store/auth';
 import CountUp from '../components/CountUp';
 import { Input } from '../components/ui/input';
@@ -21,7 +22,7 @@ export default function ParkingDetailPage() {
   const { id } = useParams();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { user } = useAuthStore();
+  const { user, token } = useAuthStore();
   const [open, setOpen] = useState(false);
 
   const { data, isLoading } = useQuery({
@@ -38,12 +39,12 @@ export default function ParkingDetailPage() {
   }, [data]);
 
   const handleReserve = async () => {
-    if (!user || !data) return;
+    if (!user || !data || !token) return;
     try {
-      await createReservation(data.id, user.id);
+      await createReservation(token, { lotName: data.name });
       toast({ title: '예약 홀드 완료', description: '15분 동안 홀드가 생성되었습니다.' });
       setOpen(false);
-      queryClient.invalidateQueries({ queryKey: ['myReservations', user.id] });
+      queryClient.invalidateQueries({ queryKey: ['myReservations', token] });
     } catch (error) {
       toast({
         title: '예약 실패',

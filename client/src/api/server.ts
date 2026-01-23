@@ -130,6 +130,19 @@ export async function getReservations(token: string) {
   return request<{ data: Array<{ id: string; lotName: string; status: string; createdAt: string; expiresAt: string; updatedAt: string }> }>('/api/reservations', { token });
 }
 
+export async function createReservation(token: string, payload: { lotName: string }) {
+  return request<{ id: string; lotName: string; status: string; createdAt: string; expiresAt: string; updatedAt: string }>(
+    '/api/reservations',
+    { method: 'POST', body: payload, token }
+  );
+}
+
+export async function confirmReservation(token: string, id: string) {
+  return request<{ id: string; lotName: string; status: string; createdAt: string; expiresAt: string; updatedAt: string }>(
+    `/api/reservations/${id}/confirm`,
+    { method: 'POST', token }
+  );
+}
 export async function cancelReservation(token: string, id: string) {
   return request<{ id: string; lotName: string; status: string; createdAt: string; expiresAt: string; updatedAt: string }>(
     `/api/reservations/${id}`,

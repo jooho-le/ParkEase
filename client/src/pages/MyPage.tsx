@@ -10,6 +10,7 @@ import Countdown from '../components/Countdown';
 import { getParkingLots } from '../api/mockServer';
 import {
   cancelReservation,
+  confirmReservation,
   deleteMe,
   getFavorites,
   getMe,
@@ -106,6 +107,8 @@ export default function MyPage() {
     switch (status) {
       case 'active':
         return '활성';
+      case 'completed':
+        return '완료';
       case 'cancelled':
         return '취소';
       case 'expired':
@@ -205,6 +208,21 @@ export default function MyPage() {
     }
   };
 
+  const handleConfirm = async () => {
+    if (!current) return;
+    try {
+      await confirmReservation(token || '', current.id);
+      toast({ title: '입차 완료', description: '예약이 완료되었습니다.' });
+      queryClient.invalidateQueries({ queryKey: ['myReservations', token] });
+    } catch (error) {
+      toast({
+        title: '입차 처리 실패',
+        description: (error as Error).message,
+        variant: 'destructive',
+      });
+    }
+  };
+
   return (
     <AppShell>
       {errorMessage && (
@@ -290,6 +308,7 @@ export default function MyPage() {
                 </div>
                 <div className="flex gap-2">
                   <Button variant="outline" onClick={handleCancel}>취소</Button>
+                  <Button onClick={handleConfirm}>입차 완료</Button>
                 </div>
               </div>
               <p className="text-sm text-slate-600">예약 ID: {current.id}</p>
