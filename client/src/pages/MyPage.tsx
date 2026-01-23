@@ -11,9 +11,11 @@ import { getParkingLots } from '../api/mockServer';
 import {
   cancelReservation,
   deleteMe,
+  getFavorites,
   getMe,
   getNotificationSettings,
   getReservations,
+  updateFavorites,
   updateMe,
   updateNotificationSettings,
 } from '../api/server';
@@ -32,22 +34,28 @@ export default function MyPage() {
   const [carNumber, setCarNumber] = useState('');
   const [newPassword, setNewPassword] = useState('');
 
-  const { data: meData } = useQuery({
+  const { data: meData, error: meError } = useQuery({
     queryKey: ['me', token],
     queryFn: () => getMe(token || ''),
     enabled: Boolean(token),
   });
 
-  const { data: reservationsData } = useQuery({
+  const { data: reservationsData, error: reservationsError } = useQuery({
     queryKey: ['myReservations', token],
     queryFn: () => getReservations(token || ''),
     enabled: Boolean(token),
     refetchInterval: 5000,
   });
 
-  const { data: notificationData } = useQuery({
+  const { data: notificationData, error: notificationError } = useQuery({
     queryKey: ['notificationSettings', token],
     queryFn: () => getNotificationSettings(token || ''),
+    enabled: Boolean(token),
+  });
+
+  const { data: favoritesData, error: favoritesError } = useQuery({
+    queryKey: ['favorites', token],
+    queryFn: () => getFavorites(token || ''),
     enabled: Boolean(token),
   });
 
@@ -71,7 +79,18 @@ export default function MyPage() {
     }
   }, [notificationData]);
 
+  useEffect(() => {
+    if (favoritesData?.lotIds) {
+      setFavorites(favoritesData.lotIds);
+    }
+  }, [favoritesData]);
+
   const reservations = reservationsData?.data ?? [];
+  const errorMessage = useMemo(() => {
+    const errors = [meError, reservationsError, notificationError, favoritesError].filter(Boolean) as Error[];
+    if (errors.length === 0) return null;
+    return errors[0].message || '데이터를 불러오지 못했습니다.';
+  }, [favoritesError, meError, notificationError, reservationsError]);
 
   const current = useMemo(
     () => reservations.find((res) => res.status === 'active'),
@@ -141,6 +160,21 @@ export default function MyPage() {
     },
   });
 
+  const favoritesMutation = useMutation({
+    mutationFn: (payload: { lotIds: string[] }) => updateFavorites(token || '', payload),
+    onSuccess: (data) => {
+      setFavorites(data.lotIds);
+      queryClient.invalidateQueries({ queryKey: ['favorites', token] });
+    },
+    onError: (error) => {
+      toast({
+        title: '즐겨찾기 저장 실패',
+        description: (error as Error).message,
+        variant: 'destructive',
+      });
+    },
+  });
+
   const deleteMutation = useMutation({
     mutationFn: () => deleteMe(token || ''),
     onSuccess: () => {
@@ -173,6 +207,12 @@ export default function MyPage() {
 
   return (
     <AppShell>
+      {errorMessage && (
+        <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-4 text-sm text-emerald-700">
+          {errorMessage}
+        </div>
+      )}
+
       <Card>
         <CardHeader>
           <CardTitle>내 정보</CardTitle>
@@ -331,11 +371,11 @@ export default function MyPage() {
                     type="checkbox"
                     checked={favorites.includes(lot.id)}
                     onChange={(event) => {
-                      setFavorites((prev) =>
-                        event.target.checked
-                          ? [...prev, lot.id]
-                          : prev.filter((id) => id !== lot.id)
-                      );
+                      const next = event.target.checked
+                        ? [...favorites, lot.id]
+                        : favorites.filter((id) => id !== lot.id);
+                      setFavorites(next);
+                      favoritesMutation.mutate({ lotIds: next });
                     }}
                   />
                   {lot.name}

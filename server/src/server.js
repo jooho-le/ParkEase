@@ -109,6 +109,16 @@ async function initializeDatabase() {
       FOREIGN KEY(user_id) REFERENCES users(id)
     )
   `);
+
+  await database.run(`
+    CREATE TABLE IF NOT EXISTS favorite_lots (
+      user_id TEXT NOT NULL,
+      lot_id TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      PRIMARY KEY (user_id, lot_id),
+      FOREIGN KEY(user_id) REFERENCES users(id)
+    )
+  `);
 }
 
 class SensorRepository {
@@ -631,12 +641,54 @@ class NotificationSettingsRepository {
   }
 }
 
+class FavoriteRepository {
+  constructor(db) {
+    this.db = db;
+  }
+
+  async getAllForUser(userId) {
+    const rows = await this.db.all(
+      `
+      SELECT lot_id as lotId
+      FROM favorite_lots
+      WHERE user_id = ?
+      ORDER BY created_at DESC
+    `,
+      [userId]
+    );
+    return rows.map((row) => row.lotId);
+  }
+
+  async replaceForUser(userId, lotIds) {
+    await this.db.run(
+      `
+      DELETE FROM favorite_lots
+      WHERE user_id = ?
+    `,
+      [userId]
+    );
+
+    const now = new Date().toISOString();
+    for (const lotId of lotIds) {
+      await this.db.run(
+        `
+        INSERT INTO favorite_lots (user_id, lot_id, created_at)
+        VALUES (?, ?, ?)
+      `,
+        [userId, lotId, now]
+      );
+    }
+    return this.getAllForUser(userId);
+  }
+}
+
 const repository = new SensorRepository(DATA_FILE);
 const nfcRepository = new NfcRepository(NFC_DATA_FILE);
 const userRepository = new UserRepository(database);
 const tokenRepository = new TokenRepository(database);
 const reservationRepository = new ReservationRepository(database);
 const notificationSettingsRepository = new NotificationSettingsRepository(database);
+const favoriteRepository = new FavoriteRepository(database);
 
 async function requireUser(req, res) {
   const token = getBearerToken(req);
@@ -825,6 +877,32 @@ async function handleRequest(req, res) {
           marketingEnabled: body.marketingEnabled,
         });
         sendJson(res, 200, updated);
+        return;
+      }
+    }
+
+    if (pathname === '/api/favorites') {
+      const user = await requireUser(req, res);
+      if (!user) {
+        return;
+      }
+
+      if (req.method === 'GET') {
+        const favorites = await favoriteRepository.getAllForUser(user.id);
+        sendJson(res, 200, { lotIds: favorites });
+        return;
+      }
+
+      if (req.method === 'PUT') {
+        const body = await parseJsonBody(req);
+        const validationError = validateFavoritesPayload(body);
+        if (validationError) {
+          sendError(res, 400, validationError);
+          return;
+        }
+
+        const favorites = await favoriteRepository.replaceForUser(user.id, body.lotIds);
+        sendJson(res, 200, { lotIds: favorites });
         return;
       }
     }
@@ -1060,6 +1138,24 @@ function validateNotificationSettingsPayload(body) {
 
   if (typeof body.marketingEnabled !== 'boolean') {
     return 'marketingEnabled (불리언) 필드가 필요합니다.';
+  }
+
+  return null;
+}
+
+function validateFavoritesPayload(body) {
+  if (!body || typeof body !== 'object') {
+    return 'JSON 형식의 데이터가 필요합니다.';
+  }
+
+  if (!Array.isArray(body.lotIds)) {
+    return 'lotIds 배열이 필요합니다.';
+  }
+
+  for (const lotId of body.lotIds) {
+    if (typeof lotId !== 'string') {
+      return 'lotIds는 문자열 배열이어야 합니다.';
+    }
   }
 
   return null;

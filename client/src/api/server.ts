@@ -118,6 +118,14 @@ export async function updateNotificationSettings(token: string, payload: {
   );
 }
 
+export async function getFavorites(token: string) {
+  return request<{ lotIds: string[] }>('/api/favorites', { token });
+}
+
+export async function updateFavorites(token: string, payload: { lotIds: string[] }) {
+  return request<{ lotIds: string[] }>('/api/favorites', { method: 'PUT', body: payload, token });
+}
+
 export async function getReservations(token: string) {
   return request<{ data: Array<{ id: string; lotName: string; status: string; createdAt: string; expiresAt: string; updatedAt: string }> }>('/api/reservations', { token });
 }
