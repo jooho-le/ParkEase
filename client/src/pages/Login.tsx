@@ -16,12 +16,15 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [passwordConfirm, setPasswordConfirm] = useState('');
   const [name, setName] = useState('');
   const mapServerUser = (serverUser: { id: string; name: string; userType?: string }) => ({
     id: serverUser.id,
     name: serverUser.name,
     role: serverUser.userType === 'STAFF' ? 'STAFF' : 'STUDENT',
   });
+  const isEmailLike = (value: string) =>
+    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
   const scrollTo = (id: string) => {
     const target = document.getElementById(id);
     if (target) {
@@ -30,6 +33,10 @@ export default function LoginPage() {
   };
 
   const handleLogin = async () => {
+    if (!email.trim() || !password.trim()) {
+      toast({ title: '아이디와 비밀번호를 입력해주세요.', variant: 'destructive' });
+      return;
+    }
     try {
       setLoading(true);
       const result = await loginUser({ id: email.trim(), password });
@@ -38,7 +45,11 @@ export default function LoginPage() {
       toast({ title: '로그인 성공', description: `${mappedUser.name}님 환영합니다.` });
       navigate('/');
     } catch (error) {
-      toast({ title: '로그인 실패', description: '다시 시도해주세요.', variant: 'destructive' });
+      toast({
+        title: '로그인 실패',
+        description: error instanceof Error ? error.message : '다시 시도해주세요.',
+        variant: 'destructive',
+      });
     } finally {
       setLoading(false);
     }
@@ -47,6 +58,22 @@ export default function LoginPage() {
   const handleRegister = async () => {
     if (!name.trim()) {
       toast({ title: '이름을 입력해주세요.', variant: 'destructive' });
+      return;
+    }
+    if (!email.trim()) {
+      toast({ title: '이메일을 입력해주세요.', variant: 'destructive' });
+      return;
+    }
+    if (!isEmailLike(email)) {
+      toast({ title: '이메일 형식을 확인해주세요.', variant: 'destructive' });
+      return;
+    }
+    if (!password.trim() || password.length < 4) {
+      toast({ title: '비밀번호는 4자 이상 입력해주세요.', variant: 'destructive' });
+      return;
+    }
+    if (password !== passwordConfirm) {
+      toast({ title: '비밀번호가 일치하지 않습니다.', variant: 'destructive' });
       return;
     }
     try {
@@ -63,7 +90,11 @@ export default function LoginPage() {
       toast({ title: '회원가입 완료', description: `${mappedUser.name}님 환영합니다.` });
       navigate('/');
     } catch (error) {
-      toast({ title: '회원가입 실패', description: '다시 시도해주세요.', variant: 'destructive' });
+      toast({
+        title: '회원가입 실패',
+        description: error instanceof Error ? error.message : '다시 시도해주세요.',
+        variant: 'destructive',
+      });
     } finally {
       setLoading(false);
     }
@@ -203,6 +234,12 @@ export default function LoginPage() {
                     placeholder="비밀번호"
                     value={password}
                     onChange={(event) => setPassword(event.target.value)}
+                  />
+                  <Input
+                    type="password"
+                    placeholder="비밀번호 확인"
+                    value={passwordConfirm}
+                    onChange={(event) => setPasswordConfirm(event.target.value)}
                   />
                 </div>
 

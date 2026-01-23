@@ -1,3 +1,5 @@
+import { useAuthStore } from '../store/auth';
+
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:4000';
 
 type RequestOptions = {
@@ -22,6 +24,11 @@ async function request<T>(path: string, { method = 'GET', body, token }: Request
 
   const text = await response.text();
   const data = text ? JSON.parse(text) : null;
+
+  if (response.status === 401) {
+    useAuthStore.getState().logout();
+    throw new Error('세션이 만료되었습니다. 다시 로그인해주세요.');
+  }
 
   if (!response.ok) {
     const message = data?.error || '요청에 실패했습니다.';
